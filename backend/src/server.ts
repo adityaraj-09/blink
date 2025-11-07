@@ -1,0 +1,353 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import dotenv from 'dotenv';
+import path from 'path';
+import fs from 'fs';
+
+// Load environment variables
+dotenv.config();
+
+// Clean log files on startup
+const cleanLogFiles = () => {
+  const logFiles = [
+    path.join(__dirname, '../backend.log'),
+    path.join(__dirname, '../error.log'),
+  ];
+
+  logFiles.forEach((file) => {
+    try {
+      if (fs.existsSync(file)) {
+        fs.writeFileSync(file, '');
+        console.log(`✓ Cleaned ${path.basename(file)}`);
+      }
+    } catch (err) {
+      console.error(`Failed to clean ${path.basename(file)}:`, err);
+    }
+  });
+};
+
+cleanLogFiles();
+
+import { log } from './utils/logger';
+
+// Services
+import { DatabaseSchema } from './database/schema';
+import { RedisCache } from './services/redis-cache';
+import { ChromaService } from './services/chroma-service';
+import { EmbeddingService } from './services/embedding-service';
+import { GeminiEmbeddingService } from './services/gemini-embedding-service';
+import { CodeIngestionService } from './services/code-ingestion-service';
+import { ChatService } from './services/chat-service';
+import { GeminiChatService } from './services/gemini-chat-service';
+import { AICodeChatService } from './services/AICodeChatService';
+import { FileEditService } from './services/FileEditService';
+import { RepoSyncService } from './services/RepoSyncService';
+import { GitHubOAuthService } from './services/GitHubOAuthService';
+import { ProgressiveEditService } from './services/ProgressiveEditService';
+import { AICodeEditService } from './services/AICodeEditService';
+
+// Routes
+import { createProjectsRouter } from './routes/projects';
+import { createIngestRouter } from './routes/ingest';
+import { createChatRouter } from './routes/chat';
+import { createGitHubRoutes } from './routes/github';
+import { createGitHubFileRoutes } from './routes/githubFiles';
+import { createAIEditRoutes } from './routes/aiEdit';
+import { createProgressiveEditRoutes } from './routes/progressiveEdit';
+import { createJobStreamRoutes } from './routes/jobStream';
+import { createUsersRouter } from './routes/users';
+import { JobWorker } from './services/JobWorker';
+
+// Configuration
+const PORT = parseInt(process.env.PORT || '3000');
+const DATABASE_PATH = process.env.DATABASE_PATH || './data/code-chat.db';
+
+// Initialize services
+log.info('Initializing services...');
+
+// Database
+const db = new DatabaseSchema(DATABASE_PATH);
+log.info('✓ Database initialized');
+
+// Redis
+const redis = new RedisCache({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: parseInt(process.env.REDIS_PORT || '6379'),
+  password: process.env.REDIS_PASSWORD,
+  db: parseInt(process.env.REDIS_DB || '0'),
+  prefix: process.env.CACHE_PREFIX || 'code-chat',
+  ttl: parseInt(process.env.CACHE_TTL || '86400'),
+});
+log.info('✓ Redis cache initialized');
+
+// ChromaDB
+const chroma = new ChromaService({
+  host: process.env.CHROMA_HOST || 'localhost',
+  port: parseInt(process.env.CHROMA_PORT || '8000'),
+});
+log.info('✓ ChromaDB service initialized');
+
+// AI Provider Configuration
+const aiProvider = process.env.AI_PROVIDER || 'gemini';
+
+// Initialize services based on provider
+let embeddings: EmbeddingService | GeminiEmbeddingService;
+let chatService: ChatService | GeminiChatService;
+
+if (aiProvider === 'gemini') {
+  // Gemini (Google) - FREE!
+  log.info('Using Google Gemini for embeddings and chat');
+
+  const geminiEmbeddings = new GeminiEmbeddingService({
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_EMBEDDING_MODEL || 'text-embedding-004',
+    dimension: parseInt(process.env.EMBEDDING_DIMENSION || '768'),
+  });
+  embeddings = geminiEmbeddings;
+  log.info('✓ Gemini embedding service initialized');
+
+  chatService = new GeminiChatService(
+    db,
+    chroma,
+    geminiEmbeddings,
+    {
+      apiKey: process.env.GEMINI_API_KEY || '',
+      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
+    }
+  );
+  log.info('✓ Gemini chat service initialized');
+} else {
+  // OpenAI
+  log.info('Using OpenAI for embeddings and chat');
+
+  const openaiEmbeddings = new EmbeddingService({
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
+    dimension: parseInt(process.env.EMBEDDING_DIMENSION || '1536'),
+  });
+  embeddings = openaiEmbeddings;
+  log.info('✓ OpenAI embedding service initialized');
+
+  chatService = new ChatService(
+    db,
+    chroma,
+    openaiEmbeddings,
+    {
+      apiKey: process.env.OPENAI_API_KEY || '',
+      model: process.env.OPENAI_CHAT_MODEL || 'gpt-4-turbo-preview',
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '4096'),
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
+    }
+  );
+  log.info('✓ OpenAI chat service initialized');
+}
+
+// Code ingestion
+const ingestionService = new CodeIngestionService(
+  db,
+  redis,
+  chroma,
+  embeddings
+);
+log.info('✓ Ingestion service initialized');
+
+// File ingestion service (processes cloned repos)
+const { FileIngestionService } = require('./services/FileIngestionService');
+const fileIngestionService = new FileIngestionService(db, ingestionService);
+log.info('✓ File ingestion service initialized');
+
+// GitHub and file editing services
+const githubAuth = new GitHubOAuthService(db);
+const fileEditService = new FileEditService(db);
+const repoSyncService = new RepoSyncService(db, githubAuth, fileIngestionService);
+
+// AI Code Chat Service (for code editing with LLM)
+let aiCodeChatService: AICodeChatService | null = null;
+let progressiveEditService: ProgressiveEditService | null = null;
+
+if (aiProvider === 'gemini') {
+  const geminiEmbeddings = embeddings as GeminiEmbeddingService;
+
+  aiCodeChatService = new AICodeChatService(
+    db,
+    chroma,
+    geminiEmbeddings,
+    fileEditService,
+    repoSyncService,
+    githubAuth,
+    {
+      apiKey: process.env.GEMINI_API_KEY || '',
+      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
+    }
+  );
+  log.info('✓ AI Code Chat service initialized');
+
+  // Progressive Edit Service
+  const aiCodeEditService = new AICodeEditService(db, fileEditService, repoSyncService);
+  progressiveEditService = new ProgressiveEditService(
+    db,
+    chroma,
+    geminiEmbeddings,
+    aiCodeEditService,
+    githubAuth,
+    {
+      apiKey: process.env.GEMINI_API_KEY || '',
+      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
+    }
+  );
+  log.info('✓ Progressive Edit service initialized');
+
+  // Job Worker (processes queue in background)
+  const jobWorker = new JobWorker(
+    db,
+    chroma,
+    geminiEmbeddings,
+    aiCodeEditService,
+    {
+      apiKey: process.env.GEMINI_API_KEY || '',
+      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
+      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
+      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
+    }
+  );
+  log.info('✓ Job Worker initialized');
+}
+
+// Create Express app
+const app = express();
+
+// Security middleware
+app.use(helmet()); // Security headers
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  credentials: true,
+}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Request logging
+app.use((req, res, next) => {
+  log.http(`${req.method} ${req.path}`);
+  next();
+});
+
+// Health check
+app.get('/health', async (req, res) => {
+  try {
+    const redisHealth = await redis.ping();
+    const chromaHealth = await chroma.healthCheck();
+
+    const health = {
+      status: redisHealth && chromaHealth ? 'healthy' : 'unhealthy',
+      timestamp: Date.now(),
+      services: {
+        redis: redisHealth ? 'up' : 'down',
+        chroma: chromaHealth ? 'up' : 'down',
+        database: 'up',
+      },
+    };
+
+    res.status(health.status === 'healthy' ? 200 : 503).json(health);
+  } catch (err) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: (err as Error).message,
+    });
+  }
+});
+
+// Stats endpoint
+app.get('/stats', async (req, res) => {
+  try {
+    const dbStats = db.getDb();
+
+    const projectCount = (dbStats.prepare('SELECT COUNT(*) as count FROM projects').get() as { count: number }).count;
+    const fileCount = (dbStats.prepare('SELECT COUNT(*) as count FROM files').get() as { count: number }).count;
+    const chunkCount = (dbStats.prepare('SELECT COUNT(*) as count FROM chunks').get() as { count: number }).count;
+
+    const redisStats = await redis.getStats();
+
+    res.json({
+      database: {
+        projects: projectCount,
+        files: fileCount,
+        chunks: chunkCount,
+      },
+      cache: redisStats,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to get stats', details: (err as Error).message });
+  }
+});
+
+// API Routes (all routes have authentication and rate limiting)
+app.use('/api/users', createUsersRouter(db));
+app.use('/api/projects', createProjectsRouter(db, chroma, ingestionService));
+app.use('/api/ingest', createIngestRouter(ingestionService, db));
+app.use('/api/chat', createChatRouter(chatService, db));
+
+// GitHub integration routes
+app.use('/api/github', createGitHubRoutes(db, fileIngestionService));
+app.use('/api/projects', createGitHubFileRoutes(db));
+
+// AI Code Editor routes
+if (aiCodeChatService) {
+  app.use('/api/ai', createAIEditRoutes(db, aiCodeChatService));
+  log.info('✓ AI Code Editor routes registered');
+}
+
+// Progressive Edit routes
+if (progressiveEditService) {
+  app.use('/api/ai/edit', createProgressiveEditRoutes(db, progressiveEditService));
+  log.info('✓ Progressive Edit routes registered');
+}
+
+// Job Stream routes (SSE for real-time job progress)
+app.use('/api/jobs', createJobStreamRoutes(db));
+log.info('✓ Job Stream routes registered');
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  log.error('Error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    details: process.env.NODE_ENV === 'development' ? err.message : undefined,
+  });
+});
+
+// Start server
+app.listen(PORT, () => {
+  log.info(`\n🚀 Code Chat Backend running on http://localhost:${PORT}`);
+  log.info(`📊 Stats: http://localhost:${PORT}/stats`);
+  log.info(`❤️  Health: http://localhost:${PORT}/health`);
+  log.info(`\nEnvironment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  log.info('\nSIGTERM received, shutting down gracefully...');
+  await redis.close();
+  db.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  log.info('\nSIGINT received, shutting down gracefully...');
+  await redis.close();
+  db.close();
+  process.exit(0);
+});

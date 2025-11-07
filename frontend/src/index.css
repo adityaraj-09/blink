@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+
+@theme {
+  /* Colors */
+  --color-primary: #365eff;
+  --color-secondary: #4d70ff;
+  --color-dark-bg: #242930;
+
+  /* Font Family */
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+  /* Custom Animations */
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background-color: #1e2329;
+  color: white;
+  overflow-x: hidden;
+}
+
+/* Custom animation delays */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.delay-1000 {
+  animation-delay: 1000ms;
+}

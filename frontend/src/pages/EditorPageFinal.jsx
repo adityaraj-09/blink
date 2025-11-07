@@ -1,0 +1,1476 @@
+/**
+ * Final Editor Page - Integrated with Backend
+ * Features: Real project files, Create/Rename/Delete files, Auto-indexing
+ */
+import React from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Editor from '@monaco-editor/react';
+import {
+  Bot,
+  Github,
+  GitBranch,
+  Terminal as TerminalIcon,
+  Settings as SettingsIcon,
+  Maximize2,
+  Minimize2,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  File,
+  FilePlus,
+  ChevronRight,
+  ChevronDown,
+  Plus,
+  Edit2,
+  Trash2,
+  X,
+  Loader2,
+  AlertCircle,
+  Save,
+  ArrowLeft,
+  FileText
+} from 'lucide-react';
+import AIChatPanel from '../components/AIChatPanel';
+import FileSearchModal from '../components/FileSearchModal';
+import GitPanel from '../components/GitPanel';
+import Terminal from '../components/Terminal';
+import SettingsPanel from '../components/SettingsPanel';
+import { useAPIAuth } from '../hooks/useAPI';
+import { getProject, getProjectFiles, getAllFilesWithContent } from '../api/projects';
+import { getFileContent, updateFileContent, deleteFile, syncWithMerkleTree } from '../api/files';
+import { useCodeIngestion } from '../hooks/useCodeIngestion';
+import { Language, getLanguageFromExtension } from '../services/chunker';
+import { getFileIcon, getFolderIcon } from '../utils/fileIcons';
+import { MerkleHasher } from '../services/merkle';
+
+const EditorPageFinal = () => {
+  const navigate = useNavigate();
+  const editorRef = useRef(null);
+
+  // Project state
+  const [projectId, setProjectId] = useState(null);
+  const [projectInfo, setProjectInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Files state
+  const [files, setFiles] = useState([]);
+  const [fileTree, setFileTree] = useState([]);
+  const [openTabs, setOpenTabs] = useState([]);
+  const [activeTab, setActiveTab] = useState(null);
+  const [fileContents, setFileContents] = useState({});
+  const [fileLanguages, setFileLanguages] = useState({}); // Store language for each file
+  const [localFiles, setLocalFiles] = useState(new Set()); // Track locally-created files not yet saved
+  const [unsavedChanges, setUnsavedChanges] = useState(new Set());
+
+  // UI state
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [showFileSearch, setShowFileSearch] = useState(false);
+  const [showGitPanel, setShowGitPanel] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState(new Set(['root']));
+  const [showNewFileModal, setShowNewFileModal] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [newFileName, setNewFileName] = useState('');
+  const [renameFile, setRenameFile] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [creatingFileInFolder, setCreatingFileInFolder] = useState(null); // For inline file creation
+  const [inlineFileName, setInlineFileName] = useState('');
+  const [creatingItemType, setCreatingItemType] = useState('file'); // 'file' or 'folder'
+  const [sidebarWidth, setSidebarWidth] = useState(256); // Default 256px (w-64)
+  const [isResizing, setIsResizing] = useState(false);
+
+  // Editor settings
+  const [editorSettings, setEditorSettings] = useState({
+    fontSize: 14,
+    tabSize: 4,
+    wordWrap: false,
+    minimap: true,
+    autoSave: false,
+    theme: 'vs-dark',
+    lineHeight: 1.5
+  });
+
+  // Inject auth
+  useAPIAuth();
+
+  // Code ingestion
+  const {
+    ingestFiles,
+    isIngesting,
+    progress: ingestionProgress,
+    result: ingestionResult,
+  } = useCodeIngestion({ projectId });
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+P - File search
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        setShowFileSearch(prev => !prev);
+      }
+      // Ctrl+` - Terminal
+      else if (e.ctrlKey && e.key === '`') {
+        e.preventDefault();
+        setShowTerminal(prev => !prev);
+      }
+      // Ctrl+Shift+G - Git panel
+      else if (e.ctrlKey && e.shiftKey && e.key === 'G') {
+        e.preventDefault();
+        setShowGitPanel(prev => !prev);
+      }
+      // F11 - Fullscreen
+      else if (e.key === 'F11') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Sidebar resize handler
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 180 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing]);
+
+  // Load project on mount
+  useEffect(() => {
+    const selectedProject = localStorage.getItem('selectedProject');
+    if (selectedProject) {
+      try {
+        const project = JSON.parse(selectedProject);
+        setProjectId(project.id);
+        loadProjectData(project.id);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        setError('Failed to load project');
+      }
+    } else {
+      setError('No project selected');
+      setLoading(false);
+    }
+  }, []);
+
+  // Load project data and files
+  const loadProjectData = async (projId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log('📂 Loading project data and all files with content...');
+
+      // Fetch project info and all files with content
+      const [projectData, allFilesResponse] = await Promise.all([
+        getProject(projId),
+        getAllFilesWithContent(projId)
+      ]);
+
+      setProjectInfo(projectData);
+
+      // Store basic file info for the file tree
+      const filesList = allFilesResponse.files.map(f => ({
+        fileId: f.fileId,
+        filePath: f.filePath,
+        fileHash: f.fileHash,
+        language: f.language,
+        sizeBytes: f.sizeBytes,
+        lineCount: f.lineCount,
+        indexedAt: f.indexedAt,
+      }));
+      setFiles(filesList);
+
+      // Store all file contents in memory
+      const contents = {};
+      const languages = {};
+      for (const file of allFilesResponse.files) {
+        contents[file.filePath] = file.content || '';
+        languages[file.filePath] = file.language || 'plaintext';
+      }
+      setFileContents(contents);
+      setFileLanguages(languages);
+
+      console.log(`✓ Loaded ${allFilesResponse.files.length} files with content into memory`);
+
+      // Build file tree from files
+      const tree = buildFileTree(filesList);
+      setFileTree(tree);
+
+      // Auto-index files on open
+      if (filesList.length > 0) {
+        await autoIndexFiles(projId, filesList);
+      }
+
+    } catch (err) {
+      console.error('Failed to load project data:', err);
+      setError(err.message || 'Failed to load project data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-index files when editor opens
+  const autoIndexFiles = async (projId, filesList) => {
+    try {
+      console.log('Auto-indexing files...');
+
+      // Load content for first few files to index
+      const filesToIndex = filesList.slice(0, 10).map(f => ({
+        id: f.fileId,
+        name: f.filePath,
+        content: '', // Backend handles actual content
+        language: getLanguageFromExtension(f.filePath) || Language.Unknown,
+      }));
+
+      await ingestFiles(filesToIndex);
+      console.log('Auto-indexing completed');
+    } catch (err) {
+      console.error('Auto-indexing failed:', err);
+    }
+  };
+
+  // Sort tree nodes: folders first (alphabetically), then files (alphabetically)
+  const sortTreeNodes = (nodes) => {
+    return nodes.sort((a, b) => {
+      // Folders come before files
+      if (a.type === 'folder' && b.type === 'file') return -1;
+      if (a.type === 'file' && b.type === 'folder') return 1;
+
+      // Both are same type, sort alphabetically (case-insensitive)
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+  };
+
+  // Build file tree structure
+  const buildFileTree = (filesList) => {
+    const root = {
+      id: 'root',
+      name: projectInfo?.projectName || 'Project',
+      type: 'folder',
+      children: []
+    };
+
+    filesList.forEach(file => {
+      const parts = file.filePath.split('/');
+      let currentLevel = root.children;
+      let currentPath = '';
+
+      parts.forEach((part, index) => {
+        currentPath += (currentPath ? '/' : '') + part;
+        const isFile = index === parts.length - 1;
+
+        let existing = currentLevel.find(item => item.name === part);
+        if (!existing) {
+          existing = {
+            id: isFile ? file.fileId : `folder-${currentPath}`,
+            name: part,
+            path: currentPath,
+            type: isFile ? 'file' : 'folder',
+            ...(isFile ? { fileData: file } : { children: [] })
+          };
+          currentLevel.push(existing);
+        }
+        if (!isFile) {
+          currentLevel = existing.children;
+        }
+      });
+    });
+
+    // Recursively sort all children
+    const sortChildren = (node) => {
+      if (node.children && node.children.length > 0) {
+        node.children = sortTreeNodes(node.children);
+        node.children.forEach(child => {
+          if (child.type === 'folder') {
+            sortChildren(child);
+          }
+        });
+      }
+    };
+
+    sortChildren(root);
+
+    return [root];
+  };
+
+  // Handle file click in tree
+  const handleFileClick = async (file) => {
+    if (file.type === 'folder') {
+      toggleFolder(file.id);
+      return;
+    }
+
+    // Add to open tabs if not already open
+    if (!openTabs.find(f => f.path === file.path)) {
+      setOpenTabs([...openTabs, file]);
+    }
+    setActiveTab(file.path);
+
+    // All file contents are already loaded in memory, no need to fetch
+    // If somehow the content is missing (shouldn't happen), show a message
+    if (fileContents[file.path] === undefined) {
+      console.warn(`File content not found in memory for: ${file.path}`);
+      setFileContents(prev => ({
+        ...prev,
+        [file.path]: `// File content not loaded. Please refresh the editor.`
+      }));
+    }
+  };
+
+  // Toggle folder expansion
+  const toggleFolder = (folderId) => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle editor content change
+  const handleEditorChange = (value) => {
+    if (activeTab) {
+      setFileContents(prev => ({
+        ...prev,
+        [activeTab]: value
+      }));
+      setUnsavedChanges(prev => new Set(prev).add(activeTab));
+    }
+  };
+
+  // Save all changes using Merkle tree sync
+  const handleSaveFile = async (filePath) => {
+    if (!filePath) filePath = activeTab;
+    if (!filePath) return;
+
+    try {
+      console.log(`💾 Saving changes using Merkle tree sync...`);
+
+      // Build Merkle tree from local state (all files already in memory)
+      const merkleHasher = new MerkleHasher();
+
+      // Build file list from local state
+      const fileList = [];
+      for (const [path, content] of Object.entries(fileContents)) {
+        fileList.push({
+          path,
+          content,
+          lastModified: Date.now()
+        });
+      }
+
+      console.log(`🌳 Building Merkle tree from ${fileList.length} files in local state...`);
+
+      // Build Merkle tree
+      const merkleTree = await merkleHasher.buildTreeFromFileSystem(fileList);
+      console.log(`🌳 Merkle tree built: ${merkleTree.countFiles()} files, hash: ${merkleTree.hash.substring(0, 16)}`);
+      console.log(`🌳 Merkle tree: ${JSON.stringify(merkleTree.toJSON())}`);
+      // Step 1: Send Merkle tree to get list of changed files
+      const compareResult = await syncWithMerkleTree(projectId, merkleTree.toJSON(), null);
+
+      if (compareResult.needsFiles && compareResult.needsFiles.length > 0) {
+        console.log(`📤 Sending content for ${compareResult.needsFiles.length} changed files...`);
+
+        // Step 2: Send only the content of changed files
+        const filesData = {};
+        for (const changedPath of compareResult.needsFiles) {
+          if (fileContents[changedPath] !== undefined) {
+            filesData[changedPath] = {
+              content: fileContents[changedPath],
+              lastModified: Date.now()
+            };
+          } else {
+            console.warn(`Content not available for changed file: ${changedPath}`);
+          }
+        }
+
+        // Sync again with file contents
+        const result = await syncWithMerkleTree(projectId, merkleTree.toJSON(), filesData);
+
+        console.log(`✓ Sync complete: ${result.filesProcessed} files processed, ${result.filesDeleted || 0} files deleted`);
+        console.log(`   Summary: ${result.summary.added} added, ${result.summary.modified} modified, ${result.summary.deleted} deleted`);
+      } else {
+        console.log(`✓ No changes detected or sync complete`);
+      }
+
+      // Clear all local files and unsaved changes
+      setLocalFiles(new Set());
+      setUnsavedChanges(new Set());
+
+      console.log(`✓ All changes saved successfully`);
+    } catch (err) {
+      console.error('Failed to save changes:', err);
+      alert(`Failed to save changes: ${err.message}`);
+    }
+  };
+
+  // Create new file/folder inline in tree (VSCode style)
+  const handleInlineCreateFile = () => {
+    if (!inlineFileName.trim()) {
+      setCreatingFileInFolder(null);
+      setInlineFileName('');
+      setCreatingItemType('file');
+      return;
+    }
+
+    const itemName = inlineFileName.trim();
+
+    // Build full path
+    let itemPath;
+    if (creatingFileInFolder && creatingFileInFolder !== 'root') {
+      itemPath = `${creatingFileInFolder}/${itemName}`;
+    } else {
+      itemPath = itemName;
+    }
+
+    if (creatingItemType === 'folder') {
+      // Creating a folder - just expand it in the tree
+      // Folders don't need to be saved until they have files
+      const folderId = `folder-${itemPath}`;
+
+      // Add folder to expanded folders so it's visible
+      setExpandedFolders(prev => new Set(prev).add(folderId));
+
+      // Create a dummy file in the folder to make it appear in the tree
+      // This is a placeholder that will be replaced when a real file is added
+      const placeholderPath = `${itemPath}/.placeholder`;
+      const placeholderFile = {
+        fileId: `local-placeholder-${Date.now()}`,
+        filePath: placeholderPath,
+        language: 'plaintext',
+        sizeBytes: 0,
+        lineCount: 0,
+        indexedAt: Date.now()
+      };
+
+      setFiles(prev => [...prev, placeholderFile]);
+
+      // Rebuild file tree
+      const updatedFiles = [...files, placeholderFile];
+      const tree = buildFileTree(updatedFiles);
+      setFileTree(tree);
+
+      console.log(`📁 Created new folder: ${itemPath}`);
+    } else {
+      // Creating a file
+      // Check if file already exists
+      if (files.find(f => f.filePath === itemPath) || fileContents[itemPath]) {
+        alert('File already exists');
+        return;
+      }
+
+      // Detect language from extension
+      const detectedLanguage = getLanguageFromExtension(itemPath);
+      const initialContent = '';
+
+      // Add to local files (not yet saved to backend)
+      setLocalFiles(prev => new Set(prev).add(itemPath));
+
+      // Add to files list (temporary local entry)
+      const newFile = {
+        fileId: `local-${Date.now()}`,
+        filePath: itemPath,
+        language: detectedLanguage,
+        sizeBytes: 0,
+        lineCount: 0,
+        indexedAt: Date.now()
+      };
+      setFiles(prev => [...prev, newFile]);
+
+      // Rebuild file tree
+      const updatedFiles = [...files, newFile];
+      const tree = buildFileTree(updatedFiles);
+      setFileTree(tree);
+
+      // Add content and language to state
+      setFileContents(prev => ({
+        ...prev,
+        [itemPath]: initialContent
+      }));
+      setFileLanguages(prev => ({
+        ...prev,
+        [itemPath]: detectedLanguage
+      }));
+
+      // Mark as unsaved
+      setUnsavedChanges(prev => new Set(prev).add(itemPath));
+
+      // Open the new file
+      const treeNode = {
+        id: newFile.fileId,
+        name: itemName,
+        path: itemPath,
+        type: 'file',
+        fileData: newFile
+      };
+
+      if (!openTabs.find(f => f.path === itemPath)) {
+        setOpenTabs([...openTabs, treeNode]);
+      }
+      setActiveTab(itemPath);
+
+      console.log(`📄 Created new file: ${itemPath} (will be saved on save)`);
+    }
+
+    // Clear inline creation state
+    setCreatingFileInFolder(null);
+    setInlineFileName('');
+    setCreatingItemType('file');
+  };
+
+  // Create new file (LOCAL FIRST - not sent to backend until save)
+  const handleCreateFile = async () => {
+    if (!newFileName.trim()) {
+      alert('Please enter a file name');
+      return;
+    }
+
+    const filePath = newFileName.trim();
+
+    // Check if file already exists
+    if (files.find(f => f.filePath === filePath) || localFiles.has(filePath)) {
+      alert('File already exists');
+      return;
+    }
+
+    // Detect language from extension
+    const detectedLanguage = getLanguageFromExtension(filePath);
+    const initialContent = '';
+
+    // Add to local files (not yet saved to backend)
+    setLocalFiles(prev => new Set(prev).add(filePath));
+
+    // Add to files list (temporary local entry)
+    const newFile = {
+      fileId: `local-${Date.now()}`,
+      filePath: filePath,
+      language: detectedLanguage,
+      sizeBytes: 0,
+      lineCount: 0,
+      indexedAt: Date.now()
+    };
+    setFiles(prev => [...prev, newFile]);
+
+    // Rebuild file tree
+    const updatedFiles = [...files, newFile];
+    const tree = buildFileTree(updatedFiles);
+    setFileTree(tree);
+
+    // Add content and language to state
+    setFileContents(prev => ({
+      ...prev,
+      [filePath]: initialContent
+    }));
+    setFileLanguages(prev => ({
+      ...prev,
+      [filePath]: detectedLanguage
+    }));
+
+    // Mark as unsaved
+    setUnsavedChanges(prev => new Set(prev).add(filePath));
+
+    setShowNewFileModal(false);
+    setNewFileName('');
+
+    // Open the new file
+    const treeNode = {
+      id: newFile.fileId,
+      name: filePath.split('/').pop(),
+      path: filePath,
+      type: 'file',
+      fileData: newFile
+    };
+
+    if (!openTabs.find(f => f.path === filePath)) {
+      setOpenTabs([...openTabs, treeNode]);
+    }
+    setActiveTab(filePath);
+  };
+
+  // Delete file (local only, backend deletion happens on save via Merkle sync)
+  const handleDeleteFile = (filePath) => {
+    if (!confirm(`Are you sure you want to delete ${filePath}?`)) {
+      return;
+    }
+
+    // Remove from open tabs
+    setOpenTabs(prev => prev.filter(f => f.path !== filePath));
+    if (activeTab === filePath) {
+      const remainingTabs = openTabs.filter(f => f.path !== filePath);
+      setActiveTab(remainingTabs[0]?.path || null);
+    }
+
+    // Remove from file contents (Merkle sync will detect deletion on save)
+    setFileContents(prev => {
+      const newContents = { ...prev };
+      delete newContents[filePath];
+      return newContents;
+    });
+
+    // Remove from files list
+    setFiles(prev => prev.filter(f => f.filePath !== filePath));
+
+    // Rebuild file tree
+    const updatedFiles = files.filter(f => f.filePath !== filePath);
+    const tree = buildFileTree(updatedFiles);
+    setFileTree(tree);
+
+    // Remove from languages
+    setFileLanguages(prev => {
+      const newLangs = { ...prev };
+      delete newLangs[filePath];
+      return newLangs;
+    });
+
+    // Remove from local files if present
+    setLocalFiles(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(filePath);
+      return newSet;
+    });
+
+    // Remove from unsaved changes
+    setUnsavedChanges(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(filePath);
+      return newSet;
+    });
+
+    setContextMenu(null);
+    console.log(`🗑️ File marked for deletion: ${filePath} (will be deleted on save)`);
+  };
+
+  // Rename file (local only, backend will detect as delete + add on save)
+  const handleRenameFile = () => {
+    if (!newFileName.trim() || !renameFile) {
+      alert('Please enter a new file name');
+      return;
+    }
+
+    const oldPath = renameFile.path;
+    const newPath = newFileName.trim();
+
+    if (oldPath === newPath) {
+      setShowRenameModal(false);
+      return;
+    }
+
+    // Check if new path already exists
+    if (files.find(f => f.filePath === newPath) || fileContents[newPath]) {
+      alert('A file with that name already exists');
+      return;
+    }
+
+    // Get current content
+    const content = fileContents[oldPath] || '';
+    const language = fileLanguages[oldPath] || getLanguageFromExtension(newPath);
+
+    // Remove old file from state
+    setFileContents(prev => {
+      const newContents = { ...prev };
+      delete newContents[oldPath];
+      return newContents;
+    });
+
+    setFileLanguages(prev => {
+      const newLangs = { ...prev };
+      delete newLangs[oldPath];
+      return newLangs;
+    });
+
+    // Remove old file from files list
+    setFiles(prev => prev.filter(f => f.filePath !== oldPath));
+
+    // Add new file with content
+    const newFile = {
+      fileId: `local-${Date.now()}`,
+      filePath: newPath,
+      language: getLanguageFromExtension(newPath),
+      sizeBytes: content.length,
+      lineCount: content.split('\n').length,
+      indexedAt: Date.now()
+    };
+    setFiles(prev => [...prev, newFile]);
+
+    // Add new file to state
+    setFileContents(prev => ({
+      ...prev,
+      [newPath]: content
+    }));
+
+    setFileLanguages(prev => ({
+      ...prev,
+      [newPath]: language
+    }));
+
+    // Mark new file as unsaved (local)
+    setLocalFiles(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(oldPath);
+      newSet.add(newPath);
+      return newSet;
+    });
+
+    setUnsavedChanges(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(oldPath);
+      newSet.add(newPath);
+      return newSet;
+    });
+
+    // Rebuild file tree
+    const updatedFiles = files.filter(f => f.filePath !== oldPath);
+    updatedFiles.push(newFile);
+    const tree = buildFileTree(updatedFiles);
+    setFileTree(tree);
+
+    // Update tabs
+    setOpenTabs(prev => prev.map(f =>
+      f.path === oldPath ? { ...f, path: newPath, name: newPath.split('/').pop() } : f
+    ));
+
+    if (activeTab === oldPath) {
+      setActiveTab(newPath);
+    }
+
+    setShowRenameModal(false);
+    setRenameFile(null);
+    setNewFileName('');
+
+    console.log(`📝 File renamed: ${oldPath} → ${newPath} (will sync as delete+add on save)`);
+  };
+
+  // Close tab
+  const handleCloseTab = (filePath, e) => {
+    e?.stopPropagation();
+
+    if (unsavedChanges.has(filePath)) {
+      if (!confirm(`${filePath} has unsaved changes. Close anyway?`)) {
+        return;
+      }
+    }
+
+    const newTabs = openTabs.filter(f => f.path !== filePath);
+    setOpenTabs(newTabs);
+
+    if (activeTab === filePath) {
+      setActiveTab(newTabs[0]?.path || null);
+    }
+
+    setUnsavedChanges(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(filePath);
+      return newSet;
+    });
+  };
+
+  // Toggle fullscreen
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Handle settings change
+  const handleSettingsChange = (newSettings) => {
+    setEditorSettings(newSettings);
+  };
+
+  // Handle file selection from search modal
+  const handleFileSelectFromSearch = async (file) => {
+    // Find the file in the tree and open it
+    const foundFile = files.find(f => f.filePath === file.path);
+    if (foundFile) {
+      const treeNode = {
+        id: foundFile.fileId,
+        name: foundFile.filePath.split('/').pop(),
+        path: foundFile.filePath,
+        type: 'file',
+        fileData: foundFile
+      };
+      await handleFileClick(treeNode);
+    }
+  };
+
+  // Render file tree recursively
+  const renderFileTree = (nodes) => {
+    return nodes.map(node => {
+      const isExpanded = expandedFolders.has(node.id);
+      const isActive = activeTab === node.path;
+
+      if (node.type === 'folder') {
+        const FolderIconComponent = getFolderIcon(isExpanded);
+        return (
+          <div key={node.id}>
+            <div
+              className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 cursor-pointer rounded text-sm"
+              onClick={() => toggleFolder(node.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setContextMenu({ folder: node, x: e.clientX, y: e.clientY });
+              }}
+            >
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <FolderIconComponent size={14} className="text-blue-400" />
+              <span>{node.name}</span>
+            </div>
+            {isExpanded && (
+              <div className="ml-4">
+                {/* Show inline file/folder creation input */}
+                {creatingFileInFolder === node.path && (
+                  <div className="flex items-center gap-2 px-2 py-1 mb-1">
+                    {creatingItemType === 'folder' ? (
+                      <Folder size={14} className="text-blue-400" />
+                    ) : (
+                      <File size={14} className="text-gray-400" />
+                    )}
+                    <input
+                      type="text"
+                      value={inlineFileName}
+                      onChange={(e) => setInlineFileName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleInlineCreateFile();
+                        } else if (e.key === 'Escape') {
+                          setCreatingFileInFolder(null);
+                          setInlineFileName('');
+                          setCreatingItemType('file');
+                        }
+                      }}
+                      onBlur={() => {
+                        if (inlineFileName.trim()) {
+                          handleInlineCreateFile();
+                        } else {
+                          setCreatingFileInFolder(null);
+                          setInlineFileName('');
+                          setCreatingItemType('file');
+                        }
+                      }}
+                      placeholder={creatingItemType === 'folder' ? 'folder-name' : 'filename.ext'}
+                      className="flex-1 bg-[#0e0e0e] border border-blue-500 rounded px-2 py-0.5 text-xs focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
+                )}
+                {node.children && renderFileTree(node.children)}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      const iconOrPath = getFileIcon(node.path);
+      const isImage = typeof iconOrPath === 'string';
+
+      return (
+        <div
+          key={node.id}
+          className={`flex items-center justify-between gap-2 px-2 py-1 ml-6 hover:bg-gray-800 cursor-pointer rounded text-sm group ${
+            isActive ? 'bg-gray-800' : ''
+          }`}
+          onClick={() => handleFileClick(node)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setContextMenu({ file: node, x: e.clientX, y: e.clientY });
+          }}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {isImage ? (
+              <div className="w-4 h-4 flex items-center justify-center bg-black rounded">
+                <img src={iconOrPath} alt="" className="w-3 h-3" />
+              </div>
+            ) : (
+              React.createElement(iconOrPath, {
+                size: 14,
+                className: 'text-gray-400'
+              })
+            )}
+            <span className="truncate">{node.name}</span>
+            {unsavedChanges.has(node.path) && (
+              <span className="text-yellow-400 text-xs">●</span>
+            )}
+          </div>
+        </div>
+      );
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0e0e0e]">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <p className="text-gray-400">Loading editor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0e0e0e]">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500" />
+          <p className="text-gray-200 font-semibold">Failed to load editor</p>
+          <p className="text-gray-400 text-sm">{error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-[#0e0e0e]">
+      {/* Top Bar */}
+      <div className="bg-[#181818] border-b border-[#2d2d2d] px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-lg font-semibold">{projectInfo?.projectName}</h1>
+          {projectInfo?.repositoryUrl && (
+            <div className="flex items-center gap-1 text-xs bg-[#238636]/10 border border-[#238636]/30 px-2 py-0.5 rounded">
+              <Github size={10} />
+              <span className="text-[#238636]">{projectInfo.repositoryUrl}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {activeTab && unsavedChanges.has(activeTab) && (
+            <button
+              onClick={() => handleSaveFile()}
+              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2 text-xs font-medium transition-colors"
+            >
+              <Save size={14} />
+              Save
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowGitPanel(!showGitPanel)}
+            className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
+              showGitPanel
+                ? 'bg-orange-600 hover:bg-orange-700'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title="Git Panel (Ctrl+Shift+G)"
+          >
+            <GitBranch size={14} />
+            Git
+          </button>
+
+          <button
+            onClick={() => setShowTerminal(!showTerminal)}
+            className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
+              showTerminal
+                ? 'bg-blue-600 hover:bg-blue-700'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title="Terminal (Ctrl+`)"
+          >
+            <TerminalIcon size={14} />
+            Terminal
+          </button>
+
+          <button
+            onClick={() => setShowAIChat(!showAIChat)}
+            className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
+              showAIChat
+                ? 'bg-purple-600 hover:bg-purple-700'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+          >
+            <Bot size={14} />
+            AI Chat
+          </button>
+
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-1.5 rounded transition-colors ${
+              showSettings
+                ? 'bg-gray-600 hover:bg-gray-500'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title="Settings"
+          >
+            <SettingsIcon size={14} />
+          </button>
+
+          <button
+            onClick={toggleFullscreen}
+            className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+            title="Fullscreen (F11)"
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar - File Tree */}
+        <div
+          className="bg-[#181818] border-r border-[#2d2d2d] flex flex-col relative"
+          style={{ width: `${sidebarWidth}px` }}
+        >
+          <div className="p-3 border-b border-[#2d2d2d] flex items-center justify-between">
+            <span className="text-sm font-semibold text-gray-300">Files</span>
+            <button
+              onClick={() => setShowNewFileModal(true)}
+              className="p-1 hover:bg-gray-700 rounded transition-colors"
+              title="New File"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2">
+            {fileTree.length > 0 ? renderFileTree(fileTree) : (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No files</p>
+              </div>
+            )}
+          </div>
+
+          {/* Resize Handle */}
+          <div
+            className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors group"
+            onMouseDown={() => setIsResizing(true)}
+          >
+            <div className="absolute inset-y-0 -right-1 w-3" />
+          </div>
+        </div>
+
+        {/* Editor Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tabs */}
+          {openTabs.length > 0 && (
+            <div className="bg-[#181818] border-b border-[#2d2d2d] flex overflow-x-auto">
+              {openTabs.map(file => {
+                const iconOrPath = getFileIcon(file.path);
+                const isImage = typeof iconOrPath === 'string';
+
+                return (
+                  <div
+                    key={file.path}
+                    className={`flex items-center gap-2 px-4 py-2 border-r border-[#2d2d2d] cursor-pointer hover:bg-gray-800 transition-colors ${
+                      activeTab === file.path ? 'bg-[#0e0e0e]' : ''
+                    }`}
+                    onClick={() => setActiveTab(file.path)}
+                  >
+                    {isImage ? (
+                      <div className="w-4 h-4 flex items-center justify-center bg-black rounded">
+                        <img src={iconOrPath} alt="" className="w-3 h-3" />
+                      </div>
+                    ) : (
+                      React.createElement(iconOrPath, {
+                        size: 14,
+                        className: 'text-gray-400'
+                      })
+                    )}
+                    <span className="text-sm">{file.name}</span>
+                    {unsavedChanges.has(file.path) && (
+                      <span className="text-yellow-400 text-xs">●</span>
+                    )}
+                    <button
+                      onClick={(e) => handleCloseTab(file.path, e)}
+                      className="p-0.5 hover:bg-gray-700 rounded transition-colors ml-2"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Editor */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab ? (
+              <Editor
+                height="100%"
+                language={fileLanguages[activeTab] || getLanguageFromExtension(activeTab) || 'plaintext'}
+                value={fileContents[activeTab] || ''}
+                onChange={handleEditorChange}
+                onMount={(editor) => {
+                  editorRef.current = editor;
+                  editor.addCommand(window.monaco.KeyMod.CtrlCmd | window.monaco.KeyCode.KeyS, () => {
+                    handleSaveFile();
+                  });
+                }}
+                theme={editorSettings.theme}
+                options={{
+                  fontSize: editorSettings.fontSize,
+                  tabSize: editorSettings.tabSize,
+                  wordWrap: editorSettings.wordWrap ? 'on' : 'off',
+                  minimap: { enabled: editorSettings.minimap },
+                  lineHeight: editorSettings.lineHeight * editorSettings.fontSize,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                }}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p>Select a file to edit</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* AI Chat Panel */}
+        {showAIChat && (
+          <AIChatPanel
+            projectId={projectId}
+            files={files}
+            fileContents={fileContents}
+            onClose={() => setShowAIChat(false)}
+            onFilesChange={(updatedContents, changedFilePath) => {
+              // Update file contents in local state
+              setFileContents(updatedContents);
+
+              // Mark changed file as unsaved
+              if (changedFilePath) {
+                setUnsavedChanges(prev => new Set(prev).add(changedFilePath));
+
+                // If it's a new file, add to file tree
+                if (!files.find(f => f.filePath === changedFilePath)) {
+                  console.log(`[Editor] Creating new file from AI edit: ${changedFilePath}`);
+
+                  // Detect language from extension
+                  const detectedLanguage = getLanguageFromExtension(changedFilePath);
+
+                  // Add to local files
+                  setLocalFiles(prev => new Set(prev).add(changedFilePath));
+
+                  // Add to files list
+                  const newFile = {
+                    fileId: `local-${Date.now()}`,
+                    filePath: changedFilePath,
+                    language: detectedLanguage,
+                    sizeBytes: updatedContents[changedFilePath]?.length || 0,
+                    lineCount: updatedContents[changedFilePath]?.split('\n').length || 0,
+                    indexedAt: Date.now()
+                  };
+                  setFiles(prev => [...prev, newFile]);
+
+                  // Rebuild file tree
+                  const updatedFiles = [...files, newFile];
+                  const tree = buildFileTree(updatedFiles);
+                  setFileTree(tree);
+
+                  // Add language to state
+                  setFileLanguages(prev => ({
+                    ...prev,
+                    [changedFilePath]: detectedLanguage
+                  }));
+
+                  // Open the new file
+                  const treeNode = {
+                    id: newFile.fileId,
+                    name: changedFilePath.split('/').pop(),
+                    path: changedFilePath,
+                    type: 'file',
+                    fileData: newFile
+                  };
+
+                  if (!openTabs.find(f => f.path === changedFilePath)) {
+                    setOpenTabs(prev => [...prev, treeNode]);
+                  }
+                  setActiveTab(changedFilePath);
+
+                  console.log(`[Editor] New file added to tree: ${changedFilePath}`);
+                }
+              }
+            }}
+          />
+        )}
+
+        {/* Git Panel */}
+        {showGitPanel && (
+          <div className="w-96 flex-shrink-0">
+            <GitPanel
+              projectId={projectId}
+              onClose={() => setShowGitPanel(false)}
+            />
+          </div>
+        )}
+
+        {/* Settings Panel */}
+        {showSettings && (
+          <div className="w-96 flex-shrink-0">
+            <SettingsPanel
+              onClose={() => setShowSettings(false)}
+              settings={editorSettings}
+              onSettingsChange={handleSettingsChange}
+            />
+          </div>
+        )}
+        </div>
+
+        {/* Terminal Panel */}
+        {showTerminal && (
+          <div className="h-64 flex-shrink-0">
+            <Terminal onClose={() => setShowTerminal(false)} />
+          </div>
+        )}
+      </div>
+
+      {/* Status Bar */}
+      <div className="bg-[#181818] border-t border-[#2d2d2d] px-4 py-1.5 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-4">
+          <span className="text-gray-400">
+            Files: <span className="text-gray-200">{files.length}</span>
+          </span>
+          {isIngesting && (
+            <span className="text-blue-400 flex items-center gap-1">
+              <span className="w-2 h-2 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              Indexing...
+            </span>
+          )}
+          {ingestionResult && (
+            <span className="text-green-400">
+              ✓ Indexed {ingestionResult.result.filesProcessed} files
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4">
+          {activeTab && (
+            <span className="text-gray-400">{activeTab}</span>
+          )}
+          {unsavedChanges.size > 0 && (
+            <span className="text-yellow-400">
+              {unsavedChanges.size} unsaved
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* New File Modal */}
+      {showNewFileModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#1e1e1e] rounded-lg p-6 w-96 border border-gray-700">
+            <h3 className="text-lg font-semibold mb-4">Create New File</h3>
+            <input
+              type="text"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              placeholder="path/to/filename.ext"
+              className="w-full bg-[#0e0e0e] border border-gray-700 rounded px-3 py-2 mb-4 focus:outline-none focus:border-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateFile();
+                if (e.key === 'Escape') {
+                  setShowNewFileModal(false);
+                  setNewFileName('');
+                }
+              }}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowNewFileModal(false);
+                  setNewFileName('');
+                }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateFile}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setContextMenu(null)}
+          />
+          <div
+            className="fixed bg-[#1e1e1e] border border-gray-700 rounded shadow-lg py-1 z-50"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            {contextMenu.folder ? (
+              // Folder context menu
+              <>
+                <button
+                  onClick={() => {
+                    const folder = contextMenu.folder;
+                    // Ensure folder is expanded
+                    if (!expandedFolders.has(folder.id)) {
+                      setExpandedFolders(prev => new Set(prev).add(folder.id));
+                    }
+                    // Start inline file creation
+                    setCreatingFileInFolder(folder.path);
+                    setInlineFileName('');
+                    setCreatingItemType('file');
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm"
+                >
+                  <FilePlus size={14} />
+                  New File
+                </button>
+                <button
+                  onClick={() => {
+                    const folder = contextMenu.folder;
+                    // Ensure folder is expanded
+                    if (!expandedFolders.has(folder.id)) {
+                      setExpandedFolders(prev => new Set(prev).add(folder.id));
+                    }
+                    // Start inline folder creation
+                    setCreatingFileInFolder(folder.path);
+                    setInlineFileName('');
+                    setCreatingItemType('folder');
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm"
+                >
+                  <FolderPlus size={14} />
+                  New Folder
+                </button>
+              </>
+            ) : (
+              // File context menu
+              <>
+                <button
+                  onClick={() => {
+                    setRenameFile(contextMenu.file);
+                    setNewFileName(contextMenu.file.path);
+                    setShowRenameModal(true);
+                    setContextMenu(null);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm"
+                >
+                  <Edit2 size={14} />
+                  Rename
+                </button>
+                <button
+                  onClick={() => {
+                    handleDeleteFile(contextMenu.file.path);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm text-red-400"
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Rename Modal */}
+      {showRenameModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#1e1e1e] rounded-lg p-6 w-96 border border-gray-700">
+            <h3 className="text-lg font-semibold mb-4">Rename File</h3>
+            <p className="text-sm text-gray-400 mb-2">From: {renameFile?.path}</p>
+            <input
+              type="text"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              placeholder="new/path/to/filename.ext"
+              className="w-full bg-[#0e0e0e] border border-gray-700 rounded px-3 py-2 mb-4 focus:outline-none focus:border-blue-500"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleRenameFile();
+                if (e.key === 'Escape') {
+                  setShowRenameModal(false);
+                  setRenameFile(null);
+                  setNewFileName('');
+                }
+              }}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setShowRenameModal(false);
+                  setRenameFile(null);
+                  setNewFileName('');
+                }}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameFile}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* File Search Modal */}
+      <FileSearchModal
+        isOpen={showFileSearch}
+        onClose={() => setShowFileSearch(false)}
+        files={files.map(f => ({ path: f.filePath, name: f.filePath.split('/').pop() }))}
+        onFileSelect={handleFileSelectFromSearch}
+      />
+    </div>
+  );
+};
+
+export default EditorPageFinal;

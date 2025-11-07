@@ -1,0 +1,38 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+*.js
+*.d.ts
+*.map
+
+# Index data
+.index/
+.index-*/
+merkle_tree.json
+merkle_tree_new.json
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# Test output
+coverage/
+
+# Config (may contain sensitive data)
+.indexerrc.local.json
+
+/chroma_data
