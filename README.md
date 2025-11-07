@@ -1,24 +1,70 @@
-# Code Indexer
+# Blink AI Code Editor
 
-An intelligent code indexing tool with incremental Merkle tree-based change detection and vector embeddings for semantic code search.
+Blink AI Code Editor is a full-stack workspace for exploring, editing, and reasoning about source code with AI assistance. It pairs a rich, Monaco-powered frontend with an AI-first backend that performs semantic indexing, retrieval, and orchestration across multiple language runtimes.
 
-## Overview
+## Project Structure
 
-This tool implements a sophisticated code indexing pipeline that efficiently tracks changes in your codebase and enables semantic search across code. It combines several advanced techniques:
+- `backend/` – TypeScript/Express API that manages embeddings, repository syncing, and AI-powered conversations.
+- `frontend/` – Vite + React application that renders the Blink editing experience and connects to the backend APIs.
+- `README.md` – You are here.
 
-1. **Merkle Tree-based Change Detection** - Efficiently detect which files have changed
-2. **Tree-sitter Code Chunking** - Extract semantic chunks (functions, classes, methods)
-3. **Embedding Cache** - Reuse embeddings for unchanged code chunks
-4. **Vector Search** - Find semantically similar code using embeddings
-5. **SQLite Storage** - Persistent storage for embeddings and metadata
+## Backend Overview (`backend/`)
 
-## Features
+The backend is an Express server written in TypeScript. It orchestrates code understanding workflows by combining several services:
 
-- **Incremental Indexing**: Only process changed files using Merkle tree comparison (O(log n))
-- **Smart Code Chunking**: Parse code with tree-sitter to extract meaningful chunks
-- **Embedding Cache**: Avoid recomputing embeddings for unchanged code
-- **Multi-Language Support**: TypeScript, JavaScript, Python, Rust, Go, Java
-- **Vector Search**: Find semantically similar code chunks
-- **Efficient Storage**: SQLite for metadata, optimized vector storage
+- Embedding generation with `@google/generative-ai`, `openai`, and ChromaDB via `chromadb` and the `@chroma-core/default-embed` stack.
+- Repository introspection using `simple-git`, Merkle tree comparisons, and multiple `tree-sitter` grammars for cross-language parsing.
+- Conversation memory and cache layers with Redis (`ioredis`) and SQLite (`better-sqlite3`).
+- Secure, production-friendly deployment defaults via `helmet`, `express-rate-limit`, and Clerk authentication hooks.
 
+### Backend Scripts
 
+- `npm install` – install dependencies.
+- `npm run dev` – start the dev server with hot reload (`ts-node-dev`).
+- `npm run build` – compile TypeScript to `dist/`.
+- `npm start` – run the compiled server.
+
+Environment variables (see `backend/.env.example` if present) typically include API keys for OpenAI, Google Generative AI, Redis, and Qdrant/Chroma endpoints.
+
+## Frontend Overview (`frontend/`)
+
+The frontend is a Vite/React app designed to feel like a native code editor:
+
+- Monaco editor (`@monaco-editor/react`) with theme customization and syntax highlighting.
+- Multi-pane layout driven by `react-resizable-panels` and 3D visuals via `three`/`ogl`.
+- Clerk authentication UI (`@clerk/clerk-react`) and route handling with `react-router-dom`.
+- Tailwind CSS v4 tooling for rapid styling.
+
+### Frontend Scripts
+
+- `npm install` – install dependencies.
+- `npm run dev` – launch the Vite dev server.
+- `npm run build` – create a production bundle.
+- `npm run preview` – preview the build locally.
+
+## Getting Started
+
+1. **Clone the repo** and install dependencies in each workspace:
+   ```bash
+   npm install --prefix backend
+   npm install --prefix frontend
+   ```
+2. **Configure environment variables** for the backend (API keys, Redis, vector store URLs).
+3. **Run the backend** with `npm run dev --prefix backend` and the frontend with `npm run dev --prefix frontend` in separate terminals.
+4. Visit the frontend dev URL (default `http://localhost:5173`) and authenticate via Clerk to access the editor.
+
+## Key Capabilities
+
+- AI-aware code editor with Monaco and syntax-aware tooling.
+- Incremental repository indexing backed by Merkle trees and multi-language parsers.
+- Vector search and semantic retrieval via ChromaDB/Qdrant.
+- Conversation orchestration combining embeddings, OpenAI, and Google Gemini.
+- Secure API surface with rate limiting, logging (`winston`), and structured validation (`zod`).
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request with clear reproduction steps or implementation details. Ensure TypeScript builds succeed and lint the frontend before submitting.
+
+## License
+
+MIT License © Blink AI Code Editor contributors.
