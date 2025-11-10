@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, X, Loader, Zap, ListTodo, AlertCircle, RefreshCw, FileText, AtSign, History, MessageSquare, Plus, ChevronDown } from 'lucide-react';
+import { Send, X, Loader, Zap, ListTodo, AlertCircle, RefreshCw, FileText, AtSign, History, MessageSquare, Plus, ChevronDown, Save } from 'lucide-react';
 import { useProgressiveEdit } from '../hooks/useProgressiveEdit';
 import InstantEditView from './InstantEditView';
 import ProgressiveEditView from './ProgressiveEditView';
@@ -13,12 +13,16 @@ import { getAIEdits, getChatSessions, getChatMessages } from '../api/aiEdit';
 import { syncWithMerkleTree } from '../api/files';
 import { MerkleHasher } from '../services/merkle';
 
-const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange }) => {
+const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, onFilesChange }) => {
   const [mode, setMode] = useState('instant'); // 'instant' or 'progressive'
   const [message, setMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+
+  // Central files array - synced with parent
+  const [files, setFiles] = useState(initialFiles || []);
 
   // Session management
   const [showSessionList, setShowSessionList] = useState(false);
@@ -58,6 +62,13 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
     projectId,
     pollInterval: 2000,
   });
+
+  /**
+   * Sync files array with parent
+   */
+  useEffect(() => {
+    setFiles(initialFiles || []);
+  }, [initialFiles]);
 
   /**
    * Load all sessions on mount
@@ -190,9 +201,6 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
   const performMerkleSync = async () => {
     try {
       setIsSyncing(true);
-      console.log('[AI Chat] 🌳 Starting Merkle sync before AI request...');
-
-      const merkleHasher = new MerkleHasher();
 
       // Build file list from local state
       const fileList = [];
@@ -204,6 +212,16 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
         });
       }
 
+      // Skip Merkle sync if no files present
+      if (fileList.length === 0) {
+        console.log('[AI Chat] ⏭️  Skipping Merkle sync - no files present');
+        return true;
+      }
+
+      console.log('[AI Chat] 🌳 Starting Merkle sync before AI request...');
+
+      const merkleHasher = new MerkleHasher();
+
       console.log(`[AI Chat] 🌳 Building Merkle tree from ${fileList.length} files...`);
 
       // Build Merkle tree
@@ -211,10 +229,12 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
       console.log(`[AI Chat] 🌳 Merkle tree built: ${merkleTree.countFiles()} files, hash: ${merkleTree.hash.substring(0, 16)}`);
 
       // Step 1: Send Merkle tree to get list of changed files
+      console.log('[AI Chat] 📨 Step 1: Sending merkle tree for comparison (files: null)');
       const compareResult = await syncWithMerkleTree(projectId, merkleTree.toJSON(), null);
 
       if (compareResult.needsFiles && compareResult.needsFiles.length > 0) {
-        console.log(`[AI Chat] 📤 Sending content for ${compareResult.needsFiles.length} changed files...`);
+        console.log(`[AI Chat] 📤 Step 2: Sending content for ${compareResult.needsFiles.length} changed files...`);
+        console.log('[AI Chat] Changed files:', compareResult.needsFiles);
 
         // Step 2: Send only the content of changed files
         const filesData = {};
@@ -228,6 +248,9 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
             console.warn(`[AI Chat] Content not available for changed file: ${changedPath}`);
           }
         }
+
+        console.log('[AI Chat] 📦 Files data prepared:', Object.keys(filesData));
+        console.log('[AI Chat] 📨 Sending actual file contents to backend...');
 
         // Sync again with file contents
         const result = await syncWithMerkleTree(projectId, merkleTree.toJSON(), filesData);
@@ -244,6 +267,25 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
       throw new Error(`Merkle sync failed: ${err.message}`);
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  /**
+   * Manual Merkle sync triggered by Save button
+   */
+  const handleManualSync = async () => {
+    try {
+      setSyncSuccess(false);
+      await performMerkleSync();
+      setSyncSuccess(true);
+
+      // Clear success indicator after 2 seconds
+      setTimeout(() => {
+        setSyncSuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('[AI Chat] Manual sync failed:', err);
+      // Error is already logged in performMerkleSync
     }
   };
 
@@ -401,7 +443,9 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
         await handleInstantMode(userMessage);
       } else {
         // Progressive mode - start background task
-        await startTask(userMessage);
+        console.log('[AI Chat] Starting progressive task:', userMessage);
+        const taskId = await startTask(userMessage, sessionId);
+        console.log('[AI Chat] Progressive task started:', taskId);
       }
 
       setMessage('');
@@ -410,6 +454,10 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
       console.error('[AI Chat] Error:', error);
       if (mode === 'instant') {
         setInstantError(error.message || 'Request failed');
+      } else {
+        // For progressive mode, error is handled by the hook
+        // But we can show a toast or alert here if needed
+        alert(`Progressive task failed: ${error.message || 'Request failed'}`);
       }
     } finally {
       setIsProcessing(false);
@@ -462,6 +510,28 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
               title="Session History"
             >
               <History size={16} />
+            </button>
+
+            {/* Save Button (Manual Merkle Sync) */}
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className={`p-1.5 rounded transition-colors ${
+                syncSuccess
+                  ? 'bg-green-900/30 text-green-400'
+                  : isSyncing
+                  ? 'bg-[#2d2d2d] text-gray-400'
+                  : 'hover:bg-[#2d2d2d] text-gray-400 hover:text-gray-200'
+              }`}
+              title={isSyncing ? 'Syncing...' : syncSuccess ? 'Synced!' : 'Save & Sync'}
+            >
+              {isSyncing ? (
+                <Loader size={16} className="animate-spin" />
+              ) : syncSuccess ? (
+                <Save size={16} className="text-green-400" />
+              ) : (
+                <Save size={16} />
+              )}
             </button>
 
             <button
@@ -581,7 +651,18 @@ const AIChatPanel = ({ projectId, files, fileContents, onClose, onFilesChange })
             error={progressiveError}
             onCancel={cancelCurrentTask}
             projectId={projectId}
+            fileContents={fileContents}
             onFilesChange={onFilesChange}
+            onFileCreate={(filePath, content) => {
+              // Call parent's file creation handler
+              if (onFilesChange) {
+                const updatedContents = {
+                  ...fileContents,
+                  [filePath]: content
+                };
+                onFilesChange(updatedContents, filePath);
+              }
+            }}
           />
         )}
       </div>

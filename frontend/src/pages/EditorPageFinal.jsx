@@ -29,20 +29,25 @@ import {
   AlertCircle,
   Save,
   ArrowLeft,
-  FileText
+  FileText,
+  Zap,
+  ListTodo
 } from 'lucide-react';
 import AIChatPanel from '../components/AIChatPanel';
 import FileSearchModal from '../components/FileSearchModal';
 import GitPanel from '../components/GitPanel';
-import Terminal from '../components/Terminal';
+import WebContainerTerminal from '../components/WebContainerTerminal';
 import SettingsPanel from '../components/SettingsPanel';
+import BrowserCompatibilityWarning from '../components/BrowserCompatibilityWarning';
 import { useAPIAuth } from '../hooks/useAPI';
 import { getProject, getProjectFiles, getAllFilesWithContent } from '../api/projects';
 import { getFileContent, updateFileContent, deleteFile, syncWithMerkleTree } from '../api/files';
 import { useCodeIngestion } from '../hooks/useCodeIngestion';
+import { useWebContainer } from '../hooks/useWebContainer';
 import { Language, getLanguageFromExtension } from '../services/chunker';
 import { getFileIcon, getFolderIcon } from '../utils/fileIcons';
 import { MerkleHasher } from '../services/merkle';
+import { FileSystemSync } from '../services/webcontainer';
 
 const EditorPageFinal = () => {
   const navigate = useNavigate();
@@ -104,6 +109,21 @@ const EditorPageFinal = () => {
     progress: ingestionProgress,
     result: ingestionResult,
   } = useCodeIngestion({ projectId });
+
+  // WebContainer integration
+  const {
+    isBooted: wcBooted,
+    isBooting: wcBooting,
+    error: wcError,
+    serverUrl,
+    serverPort,
+    bootContainer,
+    mountFiles: wcMountFiles,
+    writeFile: wcWriteFile,
+  } = useWebContainer();
+
+  const [wcFiles, setWcFiles] = useState({});
+  const [showPreview, setShowPreview] = useState(false);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -258,6 +278,68 @@ const EditorPageFinal = () => {
     }
   };
 
+  // Boot WebContainer on mount
+  useEffect(() => {
+    let mounted = true;
+
+    const boot = async () => {
+      try {
+        await bootContainer();
+      } catch (err) {
+        if (mounted) {
+          console.error('Failed to boot WebContainer:', err);
+        }
+      }
+    };
+
+    boot();
+
+    return () => {
+      mounted = false;
+    };
+  }, []); // Empty deps = runs only once on mount
+
+  // Mount files to WebContainer when they're loaded (only once)
+  const hasMountedFilesRef = useRef(false);
+  useEffect(() => {
+    if (wcBooted && Object.keys(fileContents).length > 0 && !hasMountedFilesRef.current) {
+      hasMountedFilesRef.current = true;
+      
+      const convertedFiles = FileSystemSync.convertToWebContainerFormat(
+        Object.entries(fileContents).map(([path, content]) => ({
+          path,
+          content,
+        }))
+      );
+      setWcFiles(convertedFiles);
+      wcMountFiles(Object.entries(fileContents).map(([path, content]) => ({
+        path,
+        content,
+      }))).catch(err => {
+        console.error('Failed to mount files to WebContainer:', err);
+        hasMountedFilesRef.current = false; // Allow retry on error
+      });
+    }
+  }, [wcBooted, fileContents.length]); // Only depend on wcBooted and number of files, not the content itself
+
+  // Sync file changes to WebContainer
+  const syncFileToWebContainer = useCallback(async (path, content) => {
+    if (wcBooted) {
+      try {
+        await wcWriteFile(path, content);
+        console.log(`✓ Synced file to WebContainer: ${path}`);
+      } catch (err) {
+        console.error(`Failed to sync file to WebContainer: ${path}`, err);
+      }
+    }
+  }, [wcBooted, wcWriteFile]);
+
+  // Handle server ready
+  const handleServerReady = useCallback((port, url) => {
+    console.log(`🌐 Dev server ready at ${url}`);
+    setShowPreview(true);
+  }, []);
+
   // Sort tree nodes: folders first (alphabetically), then files (alphabetically)
   const sortTreeNodes = (nodes) => {
     return nodes.sort((a, b) => {
@@ -367,6 +449,9 @@ const EditorPageFinal = () => {
         [activeTab]: value
       }));
       setUnsavedChanges(prev => new Set(prev).add(activeTab));
+
+      // Sync to WebContainer (debounced in real app, but immediate for now)
+      syncFileToWebContainer(activeTab, value);
     }
   };
 
@@ -963,6 +1048,9 @@ const EditorPageFinal = () => {
 
   return (
     <div className="flex flex-col h-screen bg-[#0e0e0e]">
+      {/* Browser Compatibility Warning */}
+      <BrowserCompatibilityWarning />
+
       {/* Top Bar */}
       <div className="bg-[#181818] border-b border-[#2d2d2d] px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -982,10 +1070,15 @@ const EditorPageFinal = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {activeTab && unsavedChanges.has(activeTab) && (
+          {activeTab && (
             <button
               onClick={() => handleSaveFile()}
-              className="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2 text-xs font-medium transition-colors"
+              className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
+                unsavedChanges.has(activeTab)
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+              title={unsavedChanges.has(activeTab) ? 'Save changes' : 'Sync with Merkle tree'}
             >
               <Save size={14} />
               Save
@@ -1025,6 +1118,7 @@ const EditorPageFinal = () => {
                 ? 'bg-purple-600 hover:bg-purple-700'
                 : 'bg-gray-700 hover:bg-gray-600'
             }`}
+            title="AI Assistant"
           >
             <Bot size={14} />
             AI Chat
@@ -1259,8 +1353,36 @@ const EditorPageFinal = () => {
 
         {/* Terminal Panel */}
         {showTerminal && (
-          <div className="h-64 flex-shrink-0">
-            <Terminal onClose={() => setShowTerminal(false)} />
+          <div className="h-64 flex-shrink-0 relative">
+            <WebContainerTerminal
+              projectId={projectId}
+              files={wcFiles}
+              onServerReady={handleServerReady}
+            />
+          </div>
+        )}
+
+        {/* Preview Panel (when dev server is running) */}
+        {showPreview && serverUrl && (
+          <div className="fixed bottom-0 right-0 w-96 h-96 bg-white shadow-2xl border-2 border-primary rounded-tl-lg z-50">
+            <div className="bg-gray-100 p-2 flex items-center justify-between border-b">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs font-medium">Preview</span>
+                <span className="text-xs text-gray-500">{serverUrl}</span>
+              </div>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="p-1 hover:bg-gray-200 rounded"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <iframe
+              src={serverUrl}
+              className="w-full h-[calc(100%-40px)]"
+              title="App Preview"
+            />
           </div>
         )}
       </div>
@@ -1280,6 +1402,30 @@ const EditorPageFinal = () => {
           {ingestionResult && (
             <span className="text-green-400">
               ✓ Indexed {ingestionResult.result.filesProcessed} files
+            </span>
+          )}
+          {/* WebContainer Status */}
+          {wcBooting && (
+            <span className="text-yellow-400 flex items-center gap-1">
+              <span className="w-2 h-2 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+              Booting WebContainer...
+            </span>
+          )}
+          {wcBooted && !wcError && (
+            <span className="text-green-400 flex items-center gap-1">
+              <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+              WebContainer Ready
+            </span>
+          )}
+          {wcError && (
+            <span className="text-red-400 flex items-center gap-1">
+              <AlertCircle size={12} />
+              WC Error: {wcError}
+            </span>
+          )}
+          {serverUrl && (
+            <span className="text-blue-400 flex items-center gap-1">
+              🌐 Server: <a href={serverUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-300">{serverUrl}</a>
             </span>
           )}
         </div>

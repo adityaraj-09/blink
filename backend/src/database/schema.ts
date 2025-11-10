@@ -265,6 +265,61 @@ export class DatabaseSchema {
       CREATE INDEX IF NOT EXISTS idx_commit_history_pushed ON commit_history(pushed);
     `);
 
+    // AI Edit Tasks (Progressive edit - main task record)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_edit_tasks (
+        task_id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        user_message TEXT NOT NULL,
+        session_id TEXT,
+        status TEXT NOT NULL,
+        plan_explanation TEXT,
+        total_todos INTEGER DEFAULT 0,
+        completed_todos INTEGER DEFAULT 0,
+        failed_todos INTEGER DEFAULT 0,
+        summary_json TEXT,
+        error_message TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        completed_at INTEGER,
+        FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+      ) STRICT;
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_tasks_project ON ai_edit_tasks(project_id);
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_tasks_user ON ai_edit_tasks(user_id);
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_tasks_status ON ai_edit_tasks(status);
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_tasks_session ON ai_edit_tasks(session_id);
+    `);
+
+    // AI Edit TODOs (Progressive edit - individual TODO items)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_edit_todos (
+        todo_id TEXT PRIMARY KEY,
+        task_id TEXT NOT NULL,
+        order_index INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        file_path TEXT,
+        status TEXT NOT NULL,
+        edit_json TEXT,
+        error_message TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        completed_at INTEGER,
+        FOREIGN KEY (task_id) REFERENCES ai_edit_tasks(task_id) ON DELETE CASCADE
+      ) STRICT;
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_todos_task ON ai_edit_todos(task_id);
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_todos_status ON ai_edit_todos(status);
+      CREATE INDEX IF NOT EXISTS idx_ai_edit_todos_order ON ai_edit_todos(task_id, order_index);
+    `);
+
     // AI Edit Jobs (main job record)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ai_edit_jobs (
@@ -356,7 +411,7 @@ export class DatabaseSchema {
     // Migration: Add merkle_json column to projects table if it doesn't exist
     try {
       // Check if merkle_json column exists
-      const columns = this.db.pragma(`table_info(projects)`);
+      const columns = this.db.pragma(`table_info(projects)`) as any[];
       const hasMerkleJson = columns.some((col: any) => col.name === 'merkle_json');
 
       if (!hasMerkleJson) {
@@ -370,7 +425,7 @@ export class DatabaseSchema {
 
     // Migration: Add title column to chat_sessions table if it doesn't exist
     try {
-      const sessionColumns = this.db.pragma(`table_info(chat_sessions)`);
+      const sessionColumns = this.db.pragma(`table_info(chat_sessions)`) as any[];
       const hasTitle = sessionColumns.some((col: any) => col.name === 'title');
 
       if (!hasTitle) {
@@ -382,8 +437,151 @@ export class DatabaseSchema {
       console.error('Migration error:', err);
     }
 
+    // Migration: Update ai_edit_tasks and ai_edit_todos tables for progressive edit
+    try {
+      // Check if ai_edit_tasks exists
+      const tables = this.db.pragma(`table_list`) as any[];
+      const hasTasksTable = tables.some((t: any) => t.name === 'ai_edit_tasks');
+
+      if (hasTasksTable) {
+        // Check existing columns
+        const taskColumns = this.db.pragma(`table_info(ai_edit_tasks)`) as any[];
+        const hasExplanation = taskColumns.some((col: any) => col.name === 'explanation');
+        const hasPlanExplanation = taskColumns.some((col: any) => col.name === 'plan_explanation');
+        const hasTotalTodos = taskColumns.some((col: any) => col.name === 'total_todos');
+        const hasCompletedTodos = taskColumns.some((col: any) => col.name === 'completed_todos');
+        const hasFailedTodos = taskColumns.some((col: any) => col.name === 'failed_todos');
+
+        // If we have the old schema (explanation instead of plan_explanation)
+        if (hasExplanation && !hasPlanExplanation) {
+          console.log('Running migration: Updating ai_edit_tasks table structure...');
+
+          // SQLite doesn't support renaming columns directly, so we need to recreate the table
+          this.db.exec(`
+            -- Create new table with correct schema
+            CREATE TABLE ai_edit_tasks_new (
+              task_id TEXT PRIMARY KEY,
+              project_id TEXT NOT NULL,
+              user_id TEXT NOT NULL,
+              user_message TEXT NOT NULL,
+              session_id TEXT,
+              status TEXT NOT NULL,
+              plan_explanation TEXT,
+              total_todos INTEGER DEFAULT 0,
+              completed_todos INTEGER DEFAULT 0,
+              failed_todos INTEGER DEFAULT 0,
+              summary_json TEXT,
+              error_message TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL,
+              completed_at INTEGER,
+              FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
+              FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            ) STRICT;
+
+            -- Copy data from old table (map explanation -> plan_explanation)
+            INSERT INTO ai_edit_tasks_new (
+              task_id, project_id, user_id, user_message, session_id, status,
+              plan_explanation, summary_json, error_message,
+              created_at, updated_at, completed_at
+            )
+            SELECT
+              task_id, project_id, user_id, user_message, session_id, status,
+              explanation as plan_explanation, summary_json, error_message,
+              created_at, updated_at, completed_at
+            FROM ai_edit_tasks;
+
+            -- Drop old table
+            DROP TABLE ai_edit_tasks;
+
+            -- Rename new table to original name
+            ALTER TABLE ai_edit_tasks_new RENAME TO ai_edit_tasks;
+
+            -- Recreate indexes
+            CREATE INDEX idx_ai_edit_tasks_project ON ai_edit_tasks(project_id);
+            CREATE INDEX idx_ai_edit_tasks_user ON ai_edit_tasks(user_id);
+            CREATE INDEX idx_ai_edit_tasks_status ON ai_edit_tasks(status);
+            CREATE INDEX idx_ai_edit_tasks_session ON ai_edit_tasks(session_id);
+          `);
+
+          console.log('✓ ai_edit_tasks migration completed');
+        } else if (!hasTotalTodos || !hasCompletedTodos || !hasFailedTodos) {
+          // Add missing columns if table already has plan_explanation
+          console.log('Running migration: Adding todo count columns to ai_edit_tasks...');
+
+          if (!hasTotalTodos) {
+            this.db.exec(`ALTER TABLE ai_edit_tasks ADD COLUMN total_todos INTEGER DEFAULT 0;`);
+          }
+          if (!hasCompletedTodos) {
+            this.db.exec(`ALTER TABLE ai_edit_tasks ADD COLUMN completed_todos INTEGER DEFAULT 0;`);
+          }
+          if (!hasFailedTodos) {
+            this.db.exec(`ALTER TABLE ai_edit_tasks ADD COLUMN failed_todos INTEGER DEFAULT 0;`);
+          }
+
+          console.log('✓ ai_edit_tasks columns added');
+        }
+
+        // Check and migrate ai_edit_todos table
+        const hasTodosTable = tables.some((t: any) => t.name === 'ai_edit_todos');
+
+        if (hasTodosTable) {
+          const todoColumns = this.db.pragma(`table_info(ai_edit_todos)`) as any[];
+          const hasOrderNum = todoColumns.some((col: any) => col.name === 'order_num');
+          const hasOrderIndex = todoColumns.some((col: any) => col.name === 'order_index');
+
+          // If we have order_num instead of order_index
+          if (hasOrderNum && !hasOrderIndex) {
+            console.log('Running migration: Updating ai_edit_todos table structure...');
+
+            this.db.exec(`
+              -- Create new table with correct schema
+              CREATE TABLE ai_edit_todos_new (
+                todo_id TEXT PRIMARY KEY,
+                task_id TEXT NOT NULL,
+                order_index INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                file_path TEXT,
+                status TEXT NOT NULL,
+                edit_json TEXT,
+                error_message TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                completed_at INTEGER,
+                FOREIGN KEY (task_id) REFERENCES ai_edit_tasks(task_id) ON DELETE CASCADE
+              ) STRICT;
+
+              -- Copy data from old table (map order_num -> order_index)
+              INSERT INTO ai_edit_todos_new
+              SELECT
+                todo_id, task_id, order_num as order_index, title, description,
+                file_path, status, edit_json, error_message,
+                created_at, updated_at, completed_at
+              FROM ai_edit_todos;
+
+              -- Drop old table
+              DROP TABLE ai_edit_todos;
+
+              -- Rename new table to original name
+              ALTER TABLE ai_edit_todos_new RENAME TO ai_edit_todos;
+
+              -- Recreate indexes
+              CREATE INDEX idx_ai_edit_todos_task ON ai_edit_todos(task_id);
+              CREATE INDEX idx_ai_edit_todos_status ON ai_edit_todos(status);
+              CREATE INDEX idx_ai_edit_todos_order ON ai_edit_todos(task_id, order_index);
+            `);
+
+            console.log('✓ ai_edit_todos migration completed');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Progressive edit migration error:', err);
+    }
+
     // Set schema version
-    this.setMetadata('schema_version', '5.3.0');
+    this.setMetadata('schema_version', '5.5.0');
   }
 
   getDb(): Database.Database {

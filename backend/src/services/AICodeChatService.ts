@@ -31,7 +31,7 @@ export class AICodeChatService {
     private githubAuth: GitHubOAuthService,
   ) {
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    this.model = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
+    this.model = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-pro';
     this.maxTokens = 8192;
     this.temperature = 0.1;
     this.exaApiKey = process.env.EXA_API_KEY || '';
@@ -100,20 +100,24 @@ export class AICodeChatService {
     // Build initial prompt with minimal context
     let initialContext = `User Request: ${message}`;
 
-    // Add file context if provided
-    if (fileContext && fileContext.content) {
-      const lines = fileContext.content.split('\n');
-      let relevantCode = fileContext.content;
-
-      if (fileContext.startLine && fileContext.endLine) {
-        relevantCode = lines
-          .slice(fileContext.startLine - 1, fileContext.endLine)
-          .join('\n');
-        initialContext += `\n\nCurrent Selection (${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}):\n\`\`\`\n${relevantCode}\n\`\`\``;
-      } else {
-        initialContext += `\n\nCurrent File (${fileContext.filePath}):\n\`\`\`\n${fileContext.content}\n\`\`\``;
-      }
+    if(fileContext){
+      initialContext+=`\n\nCurrent filePath (${fileContext.filePath})`;
     }
+
+    // Add file context if provided
+    // if (fileContext && fileContext.content) {
+    //   const lines = fileContext.content.split('\n');
+    //   let relevantCode = fileContext.content;
+
+    //   if (fileContext.startLine && fileContext.endLine) {
+    //     relevantCode = lines
+    //       .slice(fileContext.startLine - 1, fileContext.endLine)
+    //       .join('\n');
+    //     initialContext += `\n\nCurrent Selection (${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}):\n\`\`\`\n${relevantCode}\n\`\`\``;
+    //   } else {
+    //     initialContext += `\n\nCurrent File (${fileContext.filePath}):\n\`\`\`\n${fileContext.content}\n\`\`\``;
+    //   }
+    // }
 
     const initialPrompt = `You are an AI code editor assistant.
 
@@ -157,7 +161,7 @@ If calling tools, do so now. If not, provide your answer directly.`;
         embeddings: this.embeddings,
         fileEditService: this.fileEditService,
         db: this.db,
-        exaApiKey: this.exaApiKey
+        exaApiKey: this.exaApiKey,
       };
 
       // Execute all tools in parallel

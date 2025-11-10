@@ -42,9 +42,56 @@ export class ProgressiveEditService {
     }
   ) {
     this.genAI = new GoogleGenerativeAI(config.apiKey);
-    this.model = config.model || 'gemini-2.0-flash-exp';
+    this.model = config.model || 'gemini-2.5-pro';
     this.maxTokens = config.maxTokens || 8192;
     this.temperature = config.temperature || 0.1;
+  }
+
+  /**
+   * Retry helper with exponential backoff
+   * Retries API calls up to 3 times with increasing delays
+   */
+  private async retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    taskId: string,
+    operation: string,
+    maxRetries: number = 3
+  ): Promise<T> {
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[Task ${taskId}] ${operation} - Attempt ${attempt}/${maxRetries}`);
+        return await fn();
+      } catch (error: any) {
+        lastError = error;
+
+        // Check if it's a retryable error
+        const isRetryable =
+          error.status === 503 || // Service Unavailable
+          error.status === 429 || // Too Many Requests
+          error.status === 500 || // Internal Server Error
+          error.code === 'ECONNRESET' ||
+          error.code === 'ETIMEDOUT';
+
+        if (!isRetryable || attempt === maxRetries) {
+          // Don't retry if not retryable or if this was the last attempt
+          throw error;
+        }
+
+        // Calculate exponential backoff delay: 2^attempt seconds
+        const delaySeconds = Math.pow(2, attempt);
+        console.log(
+          `[Task ${taskId}] ${operation} failed (${error.status || error.code}): ${error.message}. ` +
+          `Retrying in ${delaySeconds}s... (${attempt}/${maxRetries})`
+        );
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delaySeconds * 1000));
+      }
+    }
+
+    throw lastError;
   }
 
   /**
@@ -69,7 +116,7 @@ export class ProgressiveEditService {
     `).run(taskId, projectId, userId, sessionId || null, message, now, now);
 
     // Start background processing
-    this.processTaskInBackground(taskId, projectId, userId, message).catch(error => {
+    this.processTaskInBackground(taskId, projectId, userId, message, sessionId).catch(error => {
       console.error(`Task ${taskId} failed:`, error);
       this.updateTaskStatus(taskId, 'failed');
     });
@@ -84,12 +131,13 @@ export class ProgressiveEditService {
     taskId: string,
     projectId: string,
     userId: string,
-    userMessage: string
+    userMessage: string,
+    sessionId?: string
   ): Promise<void> {
     try {
       // Phase 1: Generate TODO plan
       console.log(`[Task ${taskId}] Generating TODO plan...`);
-      const plan = await this.generateTodoPlan(projectId, userMessage);
+      const plan = await this.generateTodoPlan(projectId, userMessage, taskId);
 
       // Save plan and TODOs
       await this.savePlanToDatabase(taskId, plan);
@@ -115,7 +163,8 @@ export class ProgressiveEditService {
             userMessage,
             plan.explanation,
             todo,
-            completedEdits
+            completedEdits,
+            taskId
           );
 
           // Save edit data
@@ -143,6 +192,11 @@ export class ProgressiveEditService {
       // Update task as completed
       await this.completeTask(taskId, summary);
 
+      // Save chat message if sessionId provided
+      if (sessionId) {
+        await this.saveChatMessage(sessionId, projectId, userId, userMessage, plan, completedEdits);
+      }
+
       console.log(`[Task ${taskId}] Completed successfully!`);
 
     } catch (error: any) {
@@ -156,7 +210,8 @@ export class ProgressiveEditService {
    */
   private async generateTodoPlan(
     projectId: string,
-    userMessage: string
+    userMessage: string,
+    taskId: string = 'unknown'
   ): Promise<ParsedPlan> {
     // Get codebase context via vector search
     const queryEmbedding = await this.embeddings.embed(userMessage);
@@ -172,7 +227,7 @@ export class ProgressiveEditService {
     // Build planning prompt
     const prompt = this.buildPlanningPrompt(userMessage, context);
 
-    // Call LLM
+    // Call LLM with retry logic
     const model = this.genAI.getGenerativeModel({
       model: this.model,
       generationConfig: {
@@ -181,7 +236,11 @@ export class ProgressiveEditService {
       },
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await this.retryWithBackoff(
+      () => model.generateContent(prompt),
+      taskId,
+      'Generate TODO plan'
+    );
     const response = result.response.text();
 
     // Parse plan
@@ -285,7 +344,8 @@ Start planning now:`;
     userMessage: string,
     planExplanation: string,
     currentTodo: AIEditTodo,
-    completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }>
+    completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }>,
+    taskId: string = 'unknown'
   ): Promise<CodeEdit> {
     // Get codebase context
     const queryEmbedding = await this.embeddings.embed(
@@ -318,7 +378,7 @@ ${edit.newCode ? `Code:\n\`\`\`\n${edit.newCode.substring(0, 500)}${edit.newCode
       completedContext
     );
 
-    // Call LLM
+    // Call LLM with retry logic
     const model = this.genAI.getGenerativeModel({
       model: this.model,
       generationConfig: {
@@ -327,7 +387,11 @@ ${edit.newCode ? `Code:\n\`\`\`\n${edit.newCode.substring(0, 500)}${edit.newCode
       },
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await this.retryWithBackoff(
+      () => model.generateContent(prompt),
+      taskId,
+      `Generate edit for TODO ${currentTodo.order_index}`
+    );
     const response = result.response.text();
 
     // Parse edit
@@ -419,10 +483,10 @@ Implement this TODO now:`;
       const todoId = uuidv4();
       this.db.getDb().prepare(`
         INSERT INTO ai_edit_todos (
-          todo_id, task_id, order_index, title, description, file_path, status, created_at
+          todo_id, task_id, order_index, title, description, file_path, status, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
-      `).run(todoId, taskId, todo.order, todo.title, todo.description, todo.file, now);
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+      `).run(todoId, taskId, todo.order, todo.title, todo.description, todo.file, now, now);
     }
   }
 
@@ -455,11 +519,12 @@ Implement this TODO now:`;
    * Save TODO edit
    */
   private async saveTodoEdit(todoId: string, edit: CodeEdit): Promise<void> {
+    const now = Date.now();
     this.db.getDb().prepare(`
       UPDATE ai_edit_todos
-      SET edit_data = ?
+      SET edit_json = ?, updated_at = ?
       WHERE todo_id = ?
-    `).run(JSON.stringify(edit), todoId);
+    `).run(JSON.stringify(edit), now, todoId);
   }
 
   /**
@@ -475,9 +540,9 @@ Implement this TODO now:`;
 
     this.db.getDb().prepare(`
       UPDATE ai_edit_todos
-      SET status = ?, error_message = ?, completed_at = ?
+      SET status = ?, error_message = ?, completed_at = ?, updated_at = ?
       WHERE todo_id = ?
-    `).run(status, errorMessage || null, completedAt, todoId);
+    `).run(status, errorMessage || null, completedAt, now, todoId);
   }
 
   /**
@@ -543,9 +608,75 @@ Implement this TODO now:`;
 
     this.db.getDb().prepare(`
       UPDATE ai_edit_tasks
-      SET status = 'completed', final_summary = ?, completed_at = ?, updated_at = ?
+      SET status = 'completed', summary_json = ?, completed_at = ?, updated_at = ?
       WHERE task_id = ?
     `).run(summary, now, now, taskId);
+  }
+
+  /**
+   * Save chat message for progressive edit
+   */
+  private async saveChatMessage(
+    sessionId: string,
+    projectId: string,
+    userId: string,
+    userMessage: string,
+    plan: ParsedPlan,
+    completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }>
+  ): Promise<void> {
+    const now = Date.now();
+    const messageId = uuidv4();
+
+    // Check if session exists, if not create it
+    const sessionExists = this.db.getDb().prepare(`
+      SELECT 1 FROM chat_sessions WHERE session_id = ?
+    `).get(sessionId);
+
+    if (!sessionExists) {
+      // Create new session
+      this.db.getDb().prepare(`
+        INSERT INTO chat_sessions (session_id, project_id, user_id, title, created_at, updated_at, message_count)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+      `).run(sessionId, projectId, userId, null, now, now);
+    }
+
+    // Prepare metadata with edits and explanation
+    const metadata = {
+      explanation: plan.explanation,
+      edits: completedEdits.map(({ edit }) => edit),
+      summary: {
+        totalEdits: completedEdits.length,
+        creates: completedEdits.filter(({ edit }) => edit.action === 'create').length,
+        replaces: completedEdits.filter(({ edit }) => edit.action === 'replace').length,
+        inserts: completedEdits.filter(({ edit }) => edit.action === 'insert').length,
+        deletes: completedEdits.filter(({ edit }) => edit.action === 'delete').length,
+        affectedFiles: [...new Set(completedEdits.map(({ edit }) => edit.file))]
+      },
+      contextChunks: [],
+      mode: 'progressive'
+    };
+
+    // Save message
+    this.db.getDb().prepare(`
+      INSERT INTO chat_messages (message_id, session_id, role, content, created_at, context_chunks)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      messageId,
+      sessionId,
+      'user',
+      userMessage,
+      now,
+      JSON.stringify(metadata)
+    );
+
+    // Update session
+    this.db.getDb().prepare(`
+      UPDATE chat_sessions
+      SET updated_at = ?, message_count = message_count + 1
+      WHERE session_id = ?
+    `).run(now, sessionId);
+
+    console.log(`[ProgressiveEdit] Saved chat message ${messageId} to session ${sessionId}`);
   }
 
   /**
@@ -571,7 +702,7 @@ Implement this TODO now:`;
       description: row.description,
       filePath: row.file_path,
       status: row.status as TodoStatus,
-      edit: row.edit_data ? JSON.parse(row.edit_data) : null,
+      edit: row.edit_json ? JSON.parse(row.edit_json) : null,
       errorMessage: row.error_message,
       completedAt: row.completed_at
     }));
@@ -596,8 +727,8 @@ Implement this TODO now:`;
     };
 
     // Add summary if completed
-    if (taskRow.status === 'completed' && taskRow.final_summary) {
-      const summaryData = JSON.parse(taskRow.final_summary);
+    if (taskRow.status === 'completed' && taskRow.summary_json) {
+      const summaryData = JSON.parse(taskRow.summary_json);
       response.summary = {
         ...summaryData,
         completedAt: taskRow.completed_at,

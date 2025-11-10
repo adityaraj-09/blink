@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .env
+
+# HTTPS certificates (do not commit)
+certs/
+*.pem
+localhost-*.pem

@@ -54,7 +54,7 @@ export function createProgressiveEditRoutes(
       const response: ProgressiveEditInitResponse = {
         taskId,
         status: 'planning',
-        message: 'AI is planning the changes. Poll /api/ai/edit/tasks/{taskId}/status for progress.'
+        message: 'AI is planning the changes'
       };
 
       res.json(response);

@@ -178,12 +178,7 @@ if (aiProvider === 'gemini') {
     fileEditService,
     repoSyncService,
     githubAuth,
-    {
-      apiKey: process.env.GEMINI_API_KEY || '',
-      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
-      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
-      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
-    }
+    
   );
   log.info('✓ AI Code Chat service initialized');
 
@@ -226,7 +221,7 @@ const app = express();
 // Security middleware
 app.use(helmet()); // Security headers
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  origin:  '*',
   credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -293,7 +288,7 @@ app.get('/stats', async (req, res) => {
 app.use('/api/users', createUsersRouter(db));
 app.use('/api/projects', createProjectsRouter(db, chroma, ingestionService));
 app.use('/api/ingest', createIngestRouter(ingestionService, db));
-app.use('/api/chat', createChatRouter(chatService, db));
+app.use('/api/chat', createChatRouter(GeminiChatService, db));
 
 // GitHub integration routes
 app.use('/api/github', createGitHubRoutes(db, fileIngestionService));

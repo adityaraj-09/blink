@@ -3,9 +3,85 @@
  * Shows real-time TODO progress with step-by-step execution
  */
 
-import { Loader, CheckCircle, XCircle, Circle, AlertCircle, Copy, StopCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Loader, CheckCircle, XCircle, Circle, AlertCircle, Copy, StopCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
-const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId, onFilesChange }) => {
+const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId, fileContents, onFilesChange, onFileCreate }) => {
+  // Track which todos have been applied
+  const appliedTodosRef = useRef(new Set());
+
+  // Track expanded TODOs
+  const [expandedTodos, setExpandedTodos] = useState(new Set());
+
+  /**
+   * Auto-apply completed edits
+   */
+  useEffect(() => {
+    if (!taskStatus || !taskStatus.todos || !onFilesChange) return;
+
+    const completedTodos = taskStatus.todos.filter(
+      todo => todo.status === 'completed' && todo.edit && !appliedTodosRef.current.has(todo.todoId)
+    );
+
+    if (completedTodos.length === 0) return;
+
+    console.log('[ProgressiveEdit] Auto-applying', completedTodos.length, 'completed edits');
+
+    completedTodos.forEach(todo => {
+      const edit = todo.edit;
+      appliedTodosRef.current.add(todo.todoId);
+
+      try {
+        if (edit.action === 'create') {
+          // Create new file
+          console.log(`[ProgressiveEdit] Creating file: ${edit.file}`);
+          if (onFileCreate) {
+            onFileCreate(edit.file, edit.newCode || '');
+          }
+        } else if (edit.action === 'replace') {
+          // Replace entire file
+          console.log(`[ProgressiveEdit] Replacing file: ${edit.file}`);
+          const updatedContents = {
+            ...fileContents,
+            [edit.file]: edit.newCode || ''
+          };
+          onFilesChange(updatedContents, edit.file);
+        } else if (edit.action === 'insert') {
+          // Insert at specific line
+          console.log(`[ProgressiveEdit] Inserting into file: ${edit.file} at line ${edit.line}`);
+          const existingContent = fileContents[edit.file] || '';
+          const lines = existingContent.split('\n');
+          const insertLine = edit.line || lines.length;
+          lines.splice(insertLine, 0, edit.newCode || '');
+          const newContent = lines.join('\n');
+
+          const updatedContents = {
+            ...fileContents,
+            [edit.file]: newContent
+          };
+          onFilesChange(updatedContents, edit.file);
+        } else if (edit.action === 'delete') {
+          // Delete lines
+          console.log(`[ProgressiveEdit] Deleting from file: ${edit.file}`);
+          const existingContent = fileContents[edit.file] || '';
+          const lines = existingContent.split('\n');
+          const startLine = edit.startLine || 0;
+          const endLine = edit.endLine || startLine;
+          lines.splice(startLine, endLine - startLine + 1);
+          const newContent = lines.join('\n');
+
+          const updatedContents = {
+            ...fileContents,
+            [edit.file]: newContent
+          };
+          onFilesChange(updatedContents, edit.file);
+        }
+      } catch (err) {
+        console.error(`[ProgressiveEdit] Failed to apply edit for ${todo.todoId}:`, err);
+      }
+    });
+  }, [taskStatus, fileContents, onFilesChange, onFileCreate]);
+
   if (!taskStatus && !isRunning && !error) {
     return (
       <div className="flex items-center justify-center h-full p-8 text-center">
@@ -22,16 +98,26 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
     );
   }
 
+  const toggleTodo = (todoId) => {
+    const newExpanded = new Set(expandedTodos);
+    if (newExpanded.has(todoId)) {
+      newExpanded.delete(todoId);
+    } else {
+      newExpanded.add(todoId);
+    }
+    setExpandedTodos(newExpanded);
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle size={16} className="text-green-400" />;
+        return <CheckCircle size={14} className="text-green-400 flex-shrink-0" />;
       case 'failed':
-        return <XCircle size={16} className="text-red-400" />;
+        return <AlertCircle size={14} className="text-red-400 flex-shrink-0" />;
       case 'processing':
-        return <Loader size={16} className="text-blue-400 animate-spin" />;
+        return <Loader size={14} className="text-blue-400 animate-spin flex-shrink-0" />;
       default:
-        return <Circle size={16} className="text-gray-500" />;
+        return <Circle size={14} className="text-gray-500 flex-shrink-0" />;
     }
   };
 
@@ -63,15 +149,15 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
     <div className="flex flex-col h-full">
       {/* Status Header */}
       {taskStatus && (
-        <div className="p-3 border-b border-gray-700 bg-[#252525]">
-          {/* Overall Progress */}
-          <div className="mb-3">
+        <div className="p-3 border-b border-[#2d2d2d] bg-[#252525]">
+          {/* Progress Bar */}
+          <div className="mb-2">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className={`font-semibold ${getStatusColor(taskStatus.status)}`}>
-                Status: {taskStatus.status.toUpperCase()}
+              <span className="font-semibold text-gray-300">
+                {taskStatus.status === 'completed' ? 'Completed' : taskStatus.status === 'processing' ? 'Processing' : 'Planning'}
               </span>
               <span className="text-gray-400">
-                {taskStatus.progress.completed}/{taskStatus.progress.total} TODOs
+                {taskStatus.progress.completed}/{taskStatus.progress.total} steps
               </span>
             </div>
             <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
@@ -82,47 +168,35 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
             </div>
           </div>
 
-          {/* Explanation */}
+          {/* Plan Explanation - Scrollable */}
           {taskStatus.explanation && (
-            <div className="p-2 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-gray-300 mb-2">
+            <div className="p-2 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-gray-300 max-h-20 overflow-y-auto">
               <strong className="text-blue-300">Plan:</strong> {taskStatus.explanation}
             </div>
           )}
 
-          {/* Current TODO */}
-          {currentTodo && (
-            <div className="p-2 bg-yellow-900/20 border border-yellow-500/30 rounded text-xs">
-              <div className="flex items-center gap-2 mb-1">
-                <Loader size={12} className="animate-spin text-yellow-400" />
-                <span className="font-semibold text-yellow-300">
-                  Step {currentTodo.order}: {currentTodo.title}
-                </span>
-              </div>
-              <div className="text-gray-400 text-xs">{currentTodo.description}</div>
-              <div className="text-gray-500 text-xs mt-1">📁 {currentTodo.filePath}</div>
-            </div>
-          )}
-
-          {/* Summary (when completed) */}
+          {/* Summary (when completed) - Scrollable */}
           {taskStatus.status === 'completed' && taskStatus.summary && (
-            <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded text-xs">
+            <div className="mt-2 p-2 bg-green-900/20 border border-green-500/30 rounded text-xs max-h-32 overflow-y-auto">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircle size={14} className="text-green-400" />
-                <span className="font-semibold text-green-300">All Steps Completed!</span>
+                <span className="font-semibold text-green-300">Completed!</span>
               </div>
               <div className="text-gray-300 space-y-1">
-                <div>Total Edits: {taskStatus.summary.totalEdits}</div>
+                <div>Total: {taskStatus.summary.totalEdits} edits</div>
                 <div className="flex gap-3 text-xs">
                   <span>✨ {taskStatus.summary.creates} creates</span>
                   <span>✏️ {taskStatus.summary.replaces} replaces</span>
                   <span>➕ {taskStatus.summary.inserts} inserts</span>
                 </div>
                 <div className="text-gray-400">
-                  Affected: {taskStatus.summary.affectedFiles.length} files
+                  Files: {taskStatus.summary.affectedFiles.length}
                 </div>
-                <div className="text-yellow-400 mt-2 text-xs">
-                  ⚠️ {taskStatus.summary.recommendation}
-                </div>
+                {taskStatus.summary.recommendation && (
+                  <div className="text-yellow-400 mt-2 text-xs">
+                    ⚠️ {taskStatus.summary.recommendation}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -149,41 +223,50 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
             </div>
             <div className="space-y-2">
               {taskStatus.todos.map((todo) => {
+                const isExpanded = expandedTodos.has(todo.todoId);
                 const isActive = todo.status === 'processing';
                 const isCompleted = todo.status === 'completed';
                 const isFailed = todo.status === 'failed';
-                const isPending = todo.status === 'pending';
 
                 return (
                   <div
                     key={todo.todoId}
-                    className={`p-2 rounded border transition-all ${
+                    className={`border rounded transition-all ${
                       isCompleted
-                        ? 'bg-green-900/10 border-green-500/20'
+                        ? 'bg-green-900/5 border-green-500/20'
                         : isFailed
-                        ? 'bg-red-900/10 border-red-500/20'
+                        ? 'bg-red-900/5 border-red-500/20'
                         : isActive
-                        ? 'bg-blue-900/10 border-blue-500/30 ring-2 ring-blue-500/20'
-                        : 'bg-gray-800 border-gray-700'
+                        ? 'bg-blue-900/5 border-blue-500/30 ring-1 ring-blue-500/20'
+                        : 'bg-[#252525] border-gray-700'
                     }`}
                   >
-                    <div className="flex items-start gap-2">
-                      <div className="mt-0.5">{getStatusIcon(todo.status)}</div>
-                      <div className="flex-1 min-w-0">
-                        {/* Header */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-mono bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">
-                            {todo.order}
-                          </span>
-                          <span className="text-xs font-medium text-gray-200">
-                            {todo.title}
-                          </span>
-                        </div>
+                    {/* TODO Header - Always Visible */}
+                    <button
+                      onClick={() => toggleTodo(todo.todoId)}
+                      className="w-full p-2 flex items-center gap-2 hover:bg-white/5 transition-colors"
+                    >
+                      {getStatusIcon(todo.status)}
+                      <span className="text-xs font-mono bg-gray-700 px-1.5 py-0.5 rounded text-gray-300">
+                        {todo.order}
+                      </span>
+                      <span className="flex-1 text-left text-sm text-gray-200">
+                        {todo.title}
+                      </span>
+                      {isActive && (
+                        <Loader size={12} className="animate-spin text-blue-400 flex-shrink-0" />
+                      )}
+                      {isExpanded ? (
+                        <ChevronDown size={14} className="text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight size={14} className="text-gray-500 flex-shrink-0" />
+                      )}
+                    </button>
 
-                        {/* Description */}
+                    {/* TODO Details - Collapsible */}
+                    {isExpanded && (
+                      <div className="px-2 pb-2 border-t border-gray-700/50 pt-2">
                         <div className="text-xs text-gray-400 mb-1">{todo.description}</div>
-
-                        {/* File Path */}
                         <div className="text-xs text-gray-500 mb-2">📁 {todo.filePath}</div>
 
                         {/* Show edit if completed */}
@@ -224,16 +307,8 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
                             {todo.errorMessage}
                           </div>
                         )}
-
-                        {/* Processing indicator */}
-                        {isActive && (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-blue-300">
-                            <Loader size={12} className="animate-spin" />
-                            <span>AI is working on this step...</span>
-                          </div>
-                        )}
                       </div>
-                    </div>
+                    )}
                   </div>
                 );
               })}

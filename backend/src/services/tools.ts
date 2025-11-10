@@ -70,6 +70,56 @@ export class AITools {
           required: ['query']
         }
       },
+      // {
+      //   name: 'run_terminal_command',
+      //   description: 'Execute a terminal command in the WebContainer (frontend runtime). Use for running builds, tests, linting, or any shell command. This runs in the browser, not on the backend server. Returns output for frontend display.',
+      //   parameters: {
+      //     type: 'object',
+      //     properties: {
+      //       command: {
+      //         type: 'string',
+      //         description: 'The command to execute (e.g., "npm run build", "ls -la", "cat package.json")'
+      //       },
+      //       cwd: {
+      //         type: 'string',
+      //         description: 'Working directory for command execution (optional, defaults to project root)'
+      //       }
+      //     },
+      //     required: ['command']
+      //   }
+      // },
+      // {
+      //   name: 'install_npm_packages',
+      //   description: 'Install npm packages in the WebContainer. Use when the user wants to add dependencies or when you detect missing packages.',
+      //   parameters: {
+      //     type: 'object',
+      //     properties: {
+      //       packages: {
+      //         type: 'array',
+      //         description: 'Array of package names to install (e.g., ["react", "typescript"]). Leave empty to run "npm install" for all dependencies.',
+      //       },
+      //       dev: {
+      //         type: 'boolean',
+      //         description: 'Install as dev dependencies (--save-dev flag). Default: false'
+      //       }
+      //     },
+      //     required: []
+      //   }
+      // },
+      // {
+      //   name: 'start_dev_server',
+      //   description: 'Start the development server in WebContainer. Use when the user wants to preview their application. Returns server URL when ready.',
+      //   parameters: {
+      //     type: 'object',
+      //     properties: {
+      //       command: {
+      //         type: 'string',
+      //         description: 'Command to start the dev server (e.g., "npm run dev", "npm start"). Defaults to "npm run dev"'
+      //       }
+      //     },
+      //     required: []
+      //   }
+      // },
       {
         name: 'read_file',
         description: 'Read the complete contents of a specific file. Use when you need to see the full implementation, understand file structure, or work with specific code.',
@@ -168,6 +218,32 @@ export class AITools {
             context
           );
 
+        case 'run_terminal_command':
+          return await this.runTerminalCommand(
+            {
+              command: args.command,
+              cwd: args.cwd
+            },
+            context
+          );
+
+        case 'install_npm_packages':
+          return await this.installNpmPackages(
+            {
+              packages: args.packages,
+              dev: args.dev
+            },
+            context
+          );
+
+        case 'start_dev_server':
+          return await this.startDevServer(
+            {
+              command: args.command
+            },
+            context
+          );
+
         case 'read_file':
           return await this.readFile(
             {
@@ -211,6 +287,81 @@ export class AITools {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  }
+
+  /**
+   * Run terminal command (returns instruction for frontend execution)
+   */
+  private static async runTerminalCommand(
+    args: { command: string; cwd?: string },
+    context: ToolContext
+  ): Promise<ToolResult> {
+    // WebContainer runs in the frontend, so we return an instruction
+    // The frontend will execute this and report back
+    return {
+      toolName: 'run_terminal_command',
+      success: true,
+      data: {
+        type: 'webcontainer_action',
+        action: 'run_command',
+        command: args.command,
+        cwd: args.cwd,
+        message: `Will execute command: ${args.command}${args.cwd ? ` in ${args.cwd}` : ''}`
+      },
+      tokensUsed: this.estimateTokens(args.command)
+    };
+  }
+
+  /**
+   * Install npm packages (returns instruction for frontend execution)
+   */
+  private static async installNpmPackages(
+    args: { packages?: string[]; dev?: boolean },
+    context: ToolContext
+  ): Promise<ToolResult> {
+    const packages = args.packages || [];
+    const isInstallAll = packages.length === 0;
+    const command = isInstallAll
+      ? 'npm install'
+      : `npm install ${args.dev ? '--save-dev ' : ''}${packages.join(' ')}`;
+
+    return {
+      toolName: 'install_npm_packages',
+      success: true,
+      data: {
+        type: 'webcontainer_action',
+        action: 'install_packages',
+        packages,
+        dev: args.dev || false,
+        command,
+        message: isInstallAll
+          ? 'Will install all dependencies from package.json'
+          : `Will install packages: ${packages.join(', ')}${args.dev ? ' (as dev dependencies)' : ''}`
+      },
+      tokensUsed: this.estimateTokens(command)
+    };
+  }
+
+  /**
+   * Start dev server (returns instruction for frontend execution)
+   */
+  private static async startDevServer(
+    args: { command?: string },
+    context: ToolContext
+  ): Promise<ToolResult> {
+    const command = args.command || 'npm run dev';
+
+    return {
+      toolName: 'start_dev_server',
+      success: true,
+      data: {
+        type: 'webcontainer_action',
+        action: 'start_server',
+        command,
+        message: `Will start development server with: ${command}`
+      },
+      tokensUsed: this.estimateTokens(command)
+    };
   }
 
   /**
@@ -263,11 +414,14 @@ export class AITools {
     args: { filePath: string },
     context: ToolContext
   ): Promise<ToolResult> {
+    console.log('args', args);
     const file = context.db.getDb().prepare(`
       SELECT *
       FROM files
       WHERE project_id = ? AND file_path = ?
     `).get(context.projectId, args.filePath) as any;
+
+    console.log('file', file);
 
     if (!file) {
       throw new Error('File not found');

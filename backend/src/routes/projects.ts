@@ -671,9 +671,33 @@ export function createProjectsRouter(
       }
 
       // Compare trees to find changes
-      const changes = oldMerkleTree
-        ? compareTrees(oldMerkleTree, newMerkleTree)
-        : [];
+      let changes: any[];
+      if (oldMerkleTree) {
+        // Compare existing tree with new tree
+        changes = compareTrees(oldMerkleTree, newMerkleTree);
+      } else {
+        // First sync - all files in new tree are "added"
+        const getAllFiles = (node: MerkleNode, pathPrefix: string = ''): any[] => {
+          if (node.isLeaf) {
+            return [{
+              path: node.path,
+              changeType: 'Added',
+              oldHash: null,
+              newHash: node.hash
+            }];
+          }
+
+          const files: any[] = [];
+          if (node.children) {
+            for (const child of node.children) {
+              files.push(...getAllFiles(child, pathPrefix));
+            }
+          }
+          return files;
+        };
+
+        changes = getAllFiles(newMerkleTree);
+      }
 
       const summary = summarizeChanges(changes);
       log.info(`   Changes: ${summary.added} added, ${summary.modified} modified, ${summary.deleted} deleted`);

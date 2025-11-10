@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import GitHubImportModal from '../components/GitHubImportModal';
+import CreateProjectModal from '../components/CreateProjectModal';
 import IngestionProgressModal from '../components/IngestionProgressModal';
 import {
   FolderGit2,
@@ -23,6 +24,7 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showGitHubModal, setShowGitHubModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -138,6 +140,20 @@ const DashboardPage = () => {
     if (importingProject?.projectId) {
       navigate(`/dashboard/projects/${importingProject.projectId}`);
     }
+  };
+
+  // Handle create project success
+  const handleCreateSuccess = (project) => {
+    console.log('Project created successfully:', project);
+
+    // Close create modal
+    setShowCreateModal(false);
+
+    // Reload projects list
+    loadProjects();
+
+    // Navigate to the project detail page
+    navigate(`/dashboard/projects/${project.projectId}`);
   };
 
   // Close progress modal
@@ -367,8 +383,8 @@ const DashboardPage = () => {
           </div>
         </button>
 
-        <Link
-          to="/dashboard/projects"
+        <button
+          onClick={() => setShowCreateModal(true)}
           className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-xl hover:border-[#365eff] hover:shadow-md transition-all group"
         >
           <div className="p-2.5 bg-gray-100 rounded-lg group-hover:bg-blue-50 transition-colors">
@@ -378,7 +394,7 @@ const DashboardPage = () => {
             <div className="text-sm font-semibold text-gray-900 mb-0.5">Create New Project</div>
             <div className="text-xs text-gray-600">Start a new project from scratch</div>
           </div>
-        </Link>
+        </button>
       </div>
 
       {/* GitHub Import Modal */}
@@ -386,6 +402,13 @@ const DashboardPage = () => {
         isOpen={showGitHubModal}
         onClose={() => setShowGitHubModal(false)}
         onImportSuccess={handleImportSuccess}
+      />
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreateSuccess={handleCreateSuccess}
       />
 
       {/* Ingestion Progress Modal */}

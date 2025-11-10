@@ -53,7 +53,7 @@ export function useProgressiveEdit(
         const request: ProgressiveEditRequest = {
           projectId,
           message,
-          sessionId,
+          ...(sessionId ? { sessionId } : {}),
         };
 
         const response = await initiateProgressiveEdit(request);

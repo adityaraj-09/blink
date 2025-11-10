@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * API Client - Base HTTP Client
  */
@@ -88,11 +89,15 @@ export class APIClient {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
-    const { method = 'GET', headers = {}, body, timeout = 30000 } = options;
+    const { method = 'GET', headers = {}, body, timeout } = options;
 
     const url = `${this.baseURL}${endpoint}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let controller: AbortController | undefined;
+    let timeoutId: number | undefined;
+    if (typeof timeout === 'number') {
+      controller = new AbortController();
+      timeoutId = window.setTimeout(() => controller!.abort(), timeout);
+    }
 
     // Get fresh token if token getter is available
     const freshToken = await this.getFreshToken();
@@ -122,10 +127,12 @@ export class APIClient {
         method,
         headers: requestHeaders,
         body: body ? JSON.stringify(body) : undefined,
-        signal: controller.signal,
+        signal: controller?.signal,
       });
 
-      clearTimeout(timeoutId);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
 
       console.log('📥 API Response:', {
         status: response.status,
@@ -158,7 +165,9 @@ export class APIClient {
 
       return data as T;
     } catch (error) {
-      clearTimeout(timeoutId);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
 
       if (error instanceof APIError) {
         throw error;
