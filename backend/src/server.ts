@@ -189,10 +189,11 @@ if (aiProvider === 'gemini') {
     chroma,
     geminiEmbeddings,
     aiCodeEditService,
+    fileEditService,
     githubAuth,
     {
       apiKey: process.env.GEMINI_API_KEY || '',
-      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
+      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash',
       maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
       temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
     }
@@ -284,7 +285,7 @@ app.get('/stats', async (req, res) => {
   }
 });
 
-// API Routes (all routes have authentication and rate limiting)
+// API Routes
 app.use('/api/users', createUsersRouter(db));
 app.use('/api/projects', createProjectsRouter(db, chroma, ingestionService));
 app.use('/api/ingest', createIngestRouter(ingestionService, db));

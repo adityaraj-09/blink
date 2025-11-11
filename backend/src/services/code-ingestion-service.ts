@@ -45,7 +45,7 @@ export class CodeIngestionService {
   ) {}
 
   /**
-   * Ingest code chunks for a project
+   * Ingest code chunks for a project - WITH PARALLEL PROCESSING
    */
   async ingestChunks(
     projectId: string,
@@ -61,24 +61,39 @@ export class CodeIngestionService {
     // Ensure project collection exists
     await this.chroma.createProjectCollection(projectId);
 
-    for (const fileChunks of chunks) {
-      await this.ingestFileChunks(
-        projectId,
-        fileChunks,
-        (stats) => {
-          chunksProcessed += stats.processed;
-          chunksReused += stats.reused;
-          chunksComputed += stats.computed;
-        }
+    // Process files in parallel batches
+    const fileBatchSize = 5; // Process 5 files concurrently
+    console.log(`[CodeIngestion] Processing ${chunks.length} files in parallel batches of ${fileBatchSize}...`);
+
+    for (let i = 0; i < chunks.length; i += fileBatchSize) {
+      const batch = chunks.slice(i, i + fileBatchSize);
+
+      // Process batch in parallel
+      const batchPromises = batch.map(fileChunks =>
+        this.ingestFileChunks(
+          projectId,
+          fileChunks,
+          (stats) => {
+            chunksProcessed += stats.processed;
+            chunksReused += stats.reused;
+            chunksComputed += stats.computed;
+          }
+        ).then(() => {
+          filesProcessed++;
+        })
       );
 
-      filesProcessed++;
+      await Promise.all(batchPromises);
+
+      console.log(`[CodeIngestion] Processed file batch ${Math.floor(i / fileBatchSize) + 1}/${Math.ceil(chunks.length / fileBatchSize)} (${filesProcessed}/${chunks.length} files)`);
     }
 
     // Update project stats
     await this.updateProjectStats(projectId);
 
     const duration = Date.now() - startTime;
+
+    console.log(`[CodeIngestion] ✅ Completed: ${filesProcessed} files, ${chunksProcessed} chunks (${chunksReused} cached, ${chunksComputed} computed) in ${(duration / 1000).toFixed(2)}s`);
 
     return {
       projectId,
@@ -156,7 +171,7 @@ export class CodeIngestionService {
       });
     }
 
-    // Check cache for existing embeddings
+    // Check cache for existing embeddings - PARALLEL PROCESSING
     const embeddingResults: Array<{
       chunkData: any;
       embedding: Float32Array;
@@ -167,12 +182,19 @@ export class CodeIngestionService {
     let reused = 0;
     let computed = 0;
 
-    for (const item of chunksToProcess) {
-      // Check Redis cache
-      const cached = await this.redis.getEmbedding(item.chunkHash);
+    // PHASE 1: Check all cache entries in parallel
+    console.log(`[Parallel] Checking cache for ${chunksToProcess.length} chunks...`);
+    const cacheCheckPromises = chunksToProcess.map(item =>
+      this.redis.getEmbedding(item.chunkHash).then(cached => ({ item, cached }))
+    );
+    const cacheResults = await Promise.all(cacheCheckPromises);
 
+    // PHASE 2: Separate cached and uncached chunks
+    const cachedChunks: typeof chunksToProcess = [];
+    const uncachedChunks: typeof chunksToProcess = [];
+
+    for (const { item, cached } of cacheResults) {
       if (cached) {
-        // Cache hit
         embeddingResults.push({
           chunkData: item.chunkData,
           embedding: cached.vector,
@@ -181,26 +203,57 @@ export class CodeIngestionService {
         });
         reused++;
       } else {
-        // Cache miss - compute embedding
-        const embedding = await this.embeddings.embed(item.chunkText);
-        const qdrantId = uuidv4();
+        uncachedChunks.push(item);
+      }
+    }
 
-        embeddingResults.push({
-          chunkData: item.chunkData,
-          embedding,
-          qdrantId,
-          fromCache: false,
+    console.log(`[Parallel] Cache hits: ${reused}, Cache misses: ${uncachedChunks.length}`);
+
+    // PHASE 3: Compute embeddings for uncached chunks in parallel batches
+    if (uncachedChunks.length > 0) {
+      const embeddingBatchSize = 10; // Process 10 embeddings concurrently
+      console.log(`[Parallel] Computing ${uncachedChunks.length} embeddings in batches of ${embeddingBatchSize}...`);
+
+      for (let i = 0; i < uncachedChunks.length; i += embeddingBatchSize) {
+        const batch = uncachedChunks.slice(i, i + embeddingBatchSize);
+
+        // Compute embeddings in parallel for this batch
+        const embeddingPromises = batch.map(async (item) => {
+          const embedding = await this.embeddings.embed(item.chunkText);
+          const qdrantId = uuidv4();
+
+          return {
+            item,
+            embedding,
+            qdrantId
+          };
         });
 
-        // Cache the embedding
-        await this.redis.setEmbedding(
-          item.chunkHash,
-          embedding,
-          qdrantId,
-          this.embeddings.getModelName()
-        );
+        const batchResults = await Promise.all(embeddingPromises);
 
-        computed++;
+        // Cache embeddings in parallel
+        const cachePromises = batchResults.map(({ item, embedding, qdrantId }) =>
+          this.redis.setEmbedding(
+            item.chunkHash,
+            embedding,
+            qdrantId,
+            this.embeddings.getModelName()
+          )
+        );
+        await Promise.all(cachePromises);
+
+        // Add to results
+        for (const { item, embedding, qdrantId } of batchResults) {
+          embeddingResults.push({
+            chunkData: item.chunkData,
+            embedding,
+            qdrantId,
+            fromCache: false,
+          });
+          computed++;
+        }
+
+        console.log(`[Parallel] Computed batch ${Math.floor(i / embeddingBatchSize) + 1}/${Math.ceil(uncachedChunks.length / embeddingBatchSize)} (${computed}/${uncachedChunks.length})`);
       }
     }
 

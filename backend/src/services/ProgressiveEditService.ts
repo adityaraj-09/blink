@@ -45,13 +45,197 @@ export class ProgressiveEditService {
     }
   ) {
     this.genAI = new GoogleGenerativeAI(config.apiKey);
-    this.model = config.model || 'gemini-2.5-pro';
+    this.model = config.model || 'gemini-2.5-flash';
     this.maxTokens = config.maxTokens || 8192;
     this.temperature = config.temperature || 0.1;
     this.exaApiKey = config.exaApiKey;
   }
 
   private exaApiKey?: string;
+
+  /**
+   * Determine the appropriate role/persona based on TODO content
+   */
+  private determineRole(todo: { title: string; description: string }): {
+    persona: string;
+    expertise: string;
+    guidelines: string;
+  } {
+    const content = `${todo.title} ${todo.description}`.toLowerCase();
+
+    // Security/Authentication expert
+    if (
+      content.includes('auth') ||
+      content.includes('security') ||
+      content.includes('password') ||
+      content.includes('token') ||
+      content.includes('jwt') ||
+      content.includes('encrypt') ||
+      content.includes('hash') ||
+      content.includes('permission') ||
+      content.includes('authorization') ||
+      content.includes('vulnerability') ||
+      content.includes('sanitiz')
+    ) {
+      return {
+        persona: 'You are a senior security engineer with 10+ years of experience in application security and authentication systems.',
+        expertise: 'You specialize in secure authentication, encryption, token management, and protecting against common vulnerabilities (OWASP Top 10).',
+        guidelines: `- Always follow security best practices and principle of least privilege
+- Never store sensitive data in plain text
+- Use industry-standard libraries (bcrypt, jsonwebtoken, etc.)
+- Validate and sanitize all inputs
+- Implement proper error handling without leaking sensitive information
+- Consider edge cases like token expiration, session hijacking, and brute force attacks
+- Add rate limiting and proper logging for security events`
+      };
+    }
+
+    // Performance/Optimization expert
+    if (
+      content.includes('performance') ||
+      content.includes('optimi') ||
+      content.includes('cache') ||
+      content.includes('speed') ||
+      content.includes('efficient') ||
+      content.includes('async') ||
+      content.includes('parallel') ||
+      content.includes('concurren') ||
+      content.includes('throttle') ||
+      content.includes('debounce') ||
+      content.includes('lazy load') ||
+      content.includes('memory')
+    ) {
+      return {
+        persona: 'You are a senior performance engineer with 10+ years of experience in optimization and scalability.',
+        expertise: 'You specialize in performance optimization, caching strategies, async processing, memory management, and scalable architectures.',
+        guidelines: `- Profile before optimizing - measure actual bottlenecks
+- Use appropriate data structures and algorithms (consider time/space complexity)
+- Implement caching at the right layer (memory, Redis, CDN)
+- Leverage async/await and Promise.all for parallelization
+- Avoid N+1 queries and unnecessary database calls
+- Consider lazy loading and pagination for large datasets
+- Monitor memory usage and prevent leaks
+- Use connection pooling and resource reuse`
+      };
+    }
+
+    // Database/Data expert
+    if (
+      content.includes('database') ||
+      content.includes('sql') ||
+      content.includes('query') ||
+      content.includes('migration') ||
+      content.includes('schema') ||
+      content.includes('index') ||
+      content.includes('transaction') ||
+      content.includes('orm')
+    ) {
+      return {
+        persona: 'You are a senior database engineer with 10+ years of experience in database design and optimization.',
+        expertise: 'You specialize in database schema design, query optimization, indexing strategies, and data integrity.',
+        guidelines: `- Design normalized schemas that balance efficiency and maintainability
+- Use proper indexing for frequently queried columns
+- Wrap related operations in transactions for data integrity
+- Use prepared statements to prevent SQL injection
+- Consider query performance and use EXPLAIN when needed
+- Handle connection pooling and timeouts properly
+- Add appropriate constraints and foreign keys
+- Plan for data migrations and backwards compatibility`
+      };
+    }
+
+    // API/Integration expert
+    if (
+      content.includes('api') ||
+      content.includes('endpoint') ||
+      content.includes('rest') ||
+      content.includes('graphql') ||
+      content.includes('webhook') ||
+      content.includes('integration') ||
+      content.includes('third-party') ||
+      content.includes('external')
+    ) {
+      return {
+        persona: 'You are a senior API architect with 10+ years of experience in designing and integrating APIs.',
+        expertise: 'You specialize in RESTful API design, API integration, error handling, and building robust client-server communication.',
+        guidelines: `- Follow REST principles and HTTP semantics correctly
+- Use appropriate status codes (200, 201, 400, 401, 404, 500, etc.)
+- Implement proper request validation and error responses
+- Add rate limiting and request throttling
+- Version your APIs for backwards compatibility
+- Document API contracts clearly
+- Handle timeouts and retries with exponential backoff
+- Validate and sanitize all external inputs
+- Implement proper authentication and authorization
+- Log API calls for debugging and monitoring`
+      };
+    }
+
+    // Testing expert
+    if (
+      content.includes('test') ||
+      content.includes('unit') ||
+      content.includes('integration') ||
+      content.includes('e2e') ||
+      content.includes('mock') ||
+      content.includes('coverage')
+    ) {
+      return {
+        persona: 'You are a senior QA engineer with 10+ years of experience in test-driven development and quality assurance.',
+        expertise: 'You specialize in writing comprehensive tests, test automation, and ensuring code quality and reliability.',
+        guidelines: `- Write clear, focused tests that test one thing at a time
+- Follow AAA pattern: Arrange, Act, Assert
+- Use descriptive test names that explain what's being tested
+- Mock external dependencies appropriately
+- Aim for high coverage of critical paths
+- Test edge cases and error scenarios
+- Keep tests fast and independent
+- Use appropriate test types (unit, integration, e2e)`
+      };
+    }
+
+    // UI/Frontend expert
+    if (
+      content.includes('ui') ||
+      content.includes('frontend') ||
+      content.includes('component') ||
+      content.includes('react') ||
+      content.includes('vue') ||
+      content.includes('css') ||
+      content.includes('style') ||
+      content.includes('responsive') ||
+      content.includes('accessibility')
+    ) {
+      return {
+        persona: 'You are a senior frontend engineer with 10+ years of experience in building user interfaces.',
+        expertise: 'You specialize in component architecture, responsive design, accessibility, and modern frontend frameworks.',
+        guidelines: `- Build reusable, composable components
+- Follow component framework best practices (hooks, lifecycle, etc.)
+- Ensure responsive design for all screen sizes
+- Implement accessibility standards (WCAG 2.1)
+- Optimize bundle size and loading performance
+- Handle loading and error states gracefully
+- Use semantic HTML elements
+- Implement proper form validation and user feedback`
+      };
+    }
+
+    // Default: Senior Full-Stack Engineer
+    return {
+      persona: 'You are a senior full-stack engineer with 10+ years of experience building production systems.',
+      expertise: 'You have deep expertise across the entire stack - frontend, backend, databases, and deployment.',
+      guidelines: `- Write clean, maintainable, and well-documented code
+- Follow SOLID principles and design patterns
+- Consider scalability, security, and performance
+- Handle errors gracefully with proper logging
+- Use TypeScript types effectively for type safety
+- Write code that's easy to test and debug
+- Consider edge cases and failure scenarios
+- Follow the existing codebase patterns and conventions
+- Add appropriate comments for complex logic
+- Think about maintainability - code is read more than written`
+    };
+  }
 
   /**
    * Retry helper with exponential backoff
@@ -257,7 +441,9 @@ export class ProgressiveEditService {
    * Build planning prompt
    */
   private buildPlanningPrompt(userMessage: string, context: string): string {
-    return `You are an expert code architect planning code changes.
+    return `ROLE: You are a senior software architect with 10+ years of experience designing and planning complex software systems.
+
+EXPERTISE: You excel at breaking down requirements into actionable tasks, considering dependencies, and planning implementations that are maintainable, scalable, and secure. You have deep knowledge of software design patterns, system architecture, and best practices across the full stack.
 
 User Request: "${userMessage}"
 
@@ -423,8 +609,19 @@ Start planning now:`;
           .join('\n\n')
       : 'This is the first TODO.';
 
+    // Determine the appropriate role for this TODO
+    const role = this.determineRole({
+      title: currentTodo.title,
+      description: currentTodo.description
+    });
+    console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Assigned role: ${role.persona.split('.')[0]}`);
+
     // Initial prompt to decide tool usage
-    const initialPrompt = `You are an AI agent executing a specific TODO from a larger development plan.
+    const initialPrompt = `ROLE & EXPERTISE:
+${role.persona}
+${role.expertise}
+
+You are executing a specific TODO from a larger development plan.
 
 Original User Request: "${userMessage}"
 
@@ -514,7 +711,8 @@ If you need tools, call them now. If not (rare), explain why you don't need them
       planExplanation,
       currentTodo,
       completedContext,
-      toolResultsText
+      toolResultsText,
+      role
     );
 
     const finalModel = this.genAI.getGenerativeModel({
@@ -617,9 +815,17 @@ If you need tools, call them now. If not (rare), explain why you don't need them
     planExplanation: string,
     currentTodo: AIEditTodo,
     completedContext: string,
-    toolResultsText: string
+    toolResultsText: string,
+    role: { persona: string; expertise: string; guidelines: string }
   ): string {
-    return `You are implementing a specific TODO from a larger development plan.
+    return `ROLE & EXPERTISE:
+${role.persona}
+${role.expertise}
+
+SPECIALIZED GUIDELINES FOR THIS TASK:
+${role.guidelines}
+
+You are implementing a specific TODO from a larger development plan.
 
 Original User Request: "${userMessage}"
 
@@ -637,7 +843,7 @@ Description: ${currentTodo.description}
 Context Gathered from Tools:
 ${toolResultsText}
 
-TASK: Implement this TODO using the context you gathered. Generate code edits in JSON format.
+TASK: Implement this TODO using the context you gathered and following your specialized guidelines above. Generate code edits in JSON format.
 
 CRITICAL: Output your response as a JSON object with the following structure:
 

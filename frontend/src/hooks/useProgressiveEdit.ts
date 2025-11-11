@@ -105,6 +105,8 @@ export function useProgressiveEdit(
       if (!isMountedRef.current) return;
 
       setTaskStatus(status);
+      // Clear any previous errors on successful poll
+      setError(null);
 
       // Check if task is complete
       if (status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
@@ -123,15 +125,17 @@ export function useProgressiveEdit(
       }
     } catch (err) {
       const error = err as Error;
-      console.error('Failed to poll task status:', error);
-      setError(error);
-      setIsRunning(false);
+      console.error('[ProgressiveEdit] Poll error (will retry):', error.message);
 
-      // Stop polling on error
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      // Set error state but DON'T stop polling
+      // Transient network errors shouldn't stop the task monitoring
+      setError(error);
+
+      // Keep polling - the task might still be running on the backend
+      // Only stop polling when:
+      // 1. Task reaches terminal status (completed/failed/cancelled)
+      // 2. Component unmounts
+      // 3. User manually cancels
     }
   }, [onTaskComplete]);
 

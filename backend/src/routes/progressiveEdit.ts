@@ -20,7 +20,7 @@ export function createProgressiveEditRoutes(
   const router = Router();
 
   // Apply rate limiting
-  router.use(apiRateLimiter);
+  // router.use(apiRateLimiter);
 
   // Apply authentication to all routes
   router.use(requireAuth);

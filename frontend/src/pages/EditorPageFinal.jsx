@@ -1048,8 +1048,7 @@ const EditorPageFinal = () => {
 
   return (
     <div className="flex flex-col h-screen bg-[#0e0e0e]">
-      {/* Browser Compatibility Warning */}
-      <BrowserCompatibilityWarning />
+    
 
       {/* Top Bar */}
       <div className="bg-[#181818] border-b border-[#2d2d2d] px-4 py-2 flex items-center justify-between">

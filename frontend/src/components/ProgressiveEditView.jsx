@@ -150,6 +150,18 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
       {/* Status Header */}
       {taskStatus && (
         <div className="p-3 border-b border-[#2d2d2d] bg-[#252525]">
+          {/* Polling Error Warning (non-blocking) */}
+          {error && isRunning && (
+            <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded text-xs text-yellow-300 flex items-center gap-2">
+              <AlertCircle size={12} className="flex-shrink-0" />
+              <div className="flex-1">
+                <div className="font-semibold">Connection issue (retrying...)</div>
+                <div className="text-yellow-400/80 text-xs mt-0.5">{error.message}</div>
+              </div>
+              <Loader size={12} className="animate-spin flex-shrink-0" />
+            </div>
+          )}
+
           {/* Progress Bar */}
           <div className="mb-2">
             <div className="flex items-center justify-between text-xs mb-1">
@@ -314,14 +326,17 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
               })}
             </div>
           </>
-        ) : error ? (
+        ) : error && !isRunning ? (
+          // Only show fatal error when task is NOT running
+          // If task is running, transient errors are shown in the header as warnings
           <div className="flex items-center justify-center h-full">
             <div className="max-w-md p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
               <div className="flex items-center gap-2 text-red-300 mb-2">
                 <AlertCircle size={18} />
-                <span className="font-semibold">Error</span>
+                <span className="font-semibold">Task Failed to Start</span>
               </div>
               <p className="text-sm text-red-200">{error.message}</p>
+              <p className="text-xs text-red-300/70 mt-2">The task could not be initiated. Please try again.</p>
             </div>
           </div>
         ) : (
