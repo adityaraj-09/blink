@@ -218,32 +218,6 @@ export class AITools {
             context
           );
 
-        case 'run_terminal_command':
-          return await this.runTerminalCommand(
-            {
-              command: args.command,
-              cwd: args.cwd
-            },
-            context
-          );
-
-        case 'install_npm_packages':
-          return await this.installNpmPackages(
-            {
-              packages: args.packages,
-              dev: args.dev
-            },
-            context
-          );
-
-        case 'start_dev_server':
-          return await this.startDevServer(
-            {
-              command: args.command
-            },
-            context
-          );
-
         case 'read_file':
           return await this.readFile(
             {

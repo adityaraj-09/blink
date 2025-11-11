@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { v4 as uuidv4 } from 'uuid';
 import { DatabaseSchema } from '../database/schema';
 import { GeminiEmbeddingService } from './gemini-embedding-service';
@@ -8,6 +8,7 @@ import { FileEditService } from './FileEditService';
 import { RepoSyncService } from './RepoSyncService';
 import { GitOperationsService } from './GitOperationsService';
 import { GitHubOAuthService } from './GitHubOAuthService';
+import { AITools, ToolResult, ToolContext } from './tools';
 import {
   AIEditTask,
   AIEditTodo,
@@ -33,19 +34,24 @@ export class ProgressiveEditService {
     private chroma: ChromaService,
     private embeddings: GeminiEmbeddingService,
     private aiEditService: AICodeEditService,
+    private fileEditService: FileEditService,
     private githubAuth: GitHubOAuthService,
     config: {
       apiKey: string;
       model?: string;
       maxTokens?: number;
       temperature?: number;
+      exaApiKey?: string;
     }
   ) {
     this.genAI = new GoogleGenerativeAI(config.apiKey);
     this.model = config.model || 'gemini-2.5-pro';
     this.maxTokens = config.maxTokens || 8192;
     this.temperature = config.temperature || 0.1;
+    this.exaApiKey = config.exaApiKey;
   }
+
+  private exaApiKey?: string;
 
   /**
    * Retry helper with exponential backoff
@@ -147,7 +153,7 @@ export class ProgressiveEditService {
 
       // Phase 2: Process each TODO
       console.log(`[Task ${taskId}] Processing ${plan.todos.length} TODOs...`);
-      const completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }> = [];
+      const completedEdits: Array<{ todo: AIEditTodo; edits: CodeEdit[] }> = [];
 
       for (const todoData of plan.todos) {
         const todo = await this.getTodoByOrder(taskId, todoData.order);
@@ -157,8 +163,8 @@ export class ProgressiveEditService {
           // Update TODO status to processing
           await this.updateTodoStatus(todo.todo_id, 'processing');
 
-          // Generate edit for this TODO
-          const edit = await this.generateEditForTodo(
+          // Generate edits for this TODO (can now return multiple edits)
+          const edits = await this.generateEditForTodo(
             projectId,
             userMessage,
             plan.explanation,
@@ -167,13 +173,13 @@ export class ProgressiveEditService {
             taskId
           );
 
-          // Save edit data
-          await this.saveTodoEdit(todo.todo_id, edit);
+          // Save edits data (as JSON array)
+          await this.saveTodoEdits(todo.todo_id, edits);
 
           // Update TODO status to completed
           await this.updateTodoStatus(todo.todo_id, 'completed');
 
-          completedEdits.push({ todo, edit });
+          completedEdits.push({ todo, edits });
 
           // Update task progress
           await this.incrementTaskProgress(taskId);
@@ -255,10 +261,22 @@ export class ProgressiveEditService {
 
 User Request: "${userMessage}"
 
-Codebase Context:
+Codebase Context (initial search results):
 ${context}
 
 IMPORTANT: Do NOT write code yet. Only create a detailed TODO list of what needs to be done.
+
+You are creating a PLAN for an AI agent that will execute each TODO. The AI agent has access to powerful tools:
+- search_codebase: Search for relevant code using vector similarity
+- read_file: Read any file in the project
+- search_web: Look up documentation, APIs, best practices
+- get_chat_history: Reference previous conversation
+
+Each TODO will be executed by an intelligent agent that can:
+1. Search the codebase to find relevant files and code
+2. Read multiple files to understand context
+3. Look up documentation online if needed
+4. Generate multiple edits across multiple files
 
 Respond in this XML format:
 
@@ -267,58 +285,77 @@ Respond in this XML format:
 Brief overview of your plan (2-3 sentences explaining the approach and why).
 </explanation>
 
-<todo order="1" file="path/to/file.ts">
-<title>Short title of what this TODO accomplishes</title>
+<todo order="1">
+<title>Short, action-oriented title (e.g., "Add user authentication logic")</title>
 <description>
-Detailed description of what needs to be done in this step.
-Explain what will be created/modified and why it's necessary.
+Detailed description of what needs to be accomplished in this step.
+Focus on WHAT needs to be done and WHY, not HOW or WHERE.
+
+The AI agent will figure out:
+- Which files to read/search
+- Which documentation to look up
+- Which files to modify/create
+
+Be specific about the business logic, requirements, and constraints.
 </description>
 </todo>
 
-<todo order="2" file="path/to/another/file.ts">
-<title>Another task</title>
-<description>What this task does...</description>
+<todo order="2">
+<title>Another focused task</title>
+<description>What this task accomplishes and why it's necessary...</description>
 </todo>
 
 <!-- More TODOs -->
 </plan>
 
-RULES:
-1. Order TODOs logically (types/interfaces first, then services, then routes, then config)
-2. Each TODO should be a single, focused task (one file modification)
-3. Include the exact file path where changes will be made
-4. Be specific about what each TODO accomplishes
-5. Consider dependencies between TODOs (e.g., types before services that use them)
-6. Typical TODO count: 5-15 depending on complexity
-7. For new features, include: types, service logic, API routes, tests, documentation
+CRITICAL RULES:
+1. **DO NOT specify file paths** - The AI agent will search and find the right files
+2. **Each TODO is a TASK, not a file** - One TODO can modify multiple files
+3. **Order TODOs logically** - Dependencies matter (types → logic → routes → config)
+4. **Be task-focused** - Describe goals, not implementation details
+5. **Keep TODOs atomic** - Each should be independently testable
+6. **Typical TODO count**: 5-15 depending on complexity
+7. **Include search hints** - Mention what the agent should search for
 
-Examples of good TODOs:
-- "Create user type definitions" (src/types/user.ts)
-- "Implement authentication service with bcrypt" (src/services/auth.ts)
-- "Add authentication middleware" (src/middleware/auth.ts)
-- "Create auth routes" (src/routes/auth.ts)
-- "Update package.json with dependencies" (package.json)
-- "Add environment variables" (.env.example)
+Examples of GOOD TODOs (task-oriented, no file paths):
+
+✓ "Add JWT-based authentication"
+  Description: Implement JWT token generation and validation. The system should generate tokens on login, validate them on protected routes, and handle token expiration. Search for existing auth patterns in the codebase. Look up JWT best practices if needed.
+
+✓ "Create user type definitions and interfaces"
+  Description: Define TypeScript types for User, UserSession, and authentication responses. Search the codebase for existing type patterns and conventions. Ensure types match database schema.
+
+✓ "Implement password hashing with bcrypt"
+  Description: Add secure password hashing using bcrypt. Search for existing security utilities. Look up bcrypt best practices (salt rounds, async vs sync). Update user creation and login flows.
+
+✓ "Add protected route middleware"
+  Description: Create middleware to protect routes requiring authentication. Should verify JWT tokens, attach user info to request, and handle errors. Search for existing middleware patterns.
+
+Examples of BAD TODOs (avoid these):
+
+✗ "Edit src/types/user.ts" - Too specific, file-focused
+✗ "Add line 45-60 in auth.ts" - Implementation detail, not a task
+✗ "Import bcrypt at top of file" - Micro-task, not atomic
 
 Start planning now:`;
   }
 
   /**
-   * Parse plan XML response
+   * Parse plan XML response (now supports optional file attribute)
    */
   private parsePlan(response: string): ParsedPlan {
     // Extract explanation
     const explanationMatch = response.match(/<explanation>([\s\S]*?)<\/explanation>/);
     const explanation = explanationMatch ? explanationMatch[1].trim() : 'AI-generated plan';
 
-    // Extract TODOs
-    const todoRegex = /<todo\s+order="(\d+)"\s+file="([^"]+)">([\s\S]*?)<\/todo>/g;
+    // Extract TODOs - file attribute is now optional
+    const todoRegex = /<todo\s+order="(\d+)"(?:\s+file="([^"]+)")?\s*>([\s\S]*?)<\/todo>/g;
     const todos: ParsedPlan['todos'] = [];
     let match;
 
     while ((match = todoRegex.exec(response)) !== null) {
       const order = parseInt(match[1]);
-      const file = match[2];
+      const file = match[2] || null; // File is optional now
       const content = match[3];
 
       const titleMatch = content.match(/<title>([\s\S]*?)<\/title>/);
@@ -337,49 +374,150 @@ Start planning now:`;
   }
 
   /**
-   * Generate edit for a specific TODO
+   * Generate edit for a specific TODO (now with tool access)
+   * This is where each TODO becomes an intelligent agent!
    */
   private async generateEditForTodo(
     projectId: string,
     userMessage: string,
     planExplanation: string,
     currentTodo: AIEditTodo,
-    completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }>,
+    completedEdits: Array<{ todo: AIEditTodo; edits: CodeEdit[] }>,
     taskId: string = 'unknown'
-  ): Promise<CodeEdit> {
-    // Get codebase context
-    const queryEmbedding = await this.embeddings.embed(
-      `${currentTodo.title} ${currentTodo.description}`
-    );
-    const searchResults = await this.chroma.search(projectId, queryEmbedding, 10, 0.6);
+  ): Promise<CodeEdit[]> {
+    console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Executing with tool access...`);
 
-    const vectorContext = searchResults
-      .map((r, i) => {
-        const { filePath, startLine, endLine, chunkText } = r.payload;
-        return `[${i + 1}] ${filePath}:${startLine}-${endLine}\n\`\`\`\n${chunkText}\n\`\`\``;
-      })
-      .join('\n\n');
+    // ============================================================
+    // PHASE 1: LLM decides which tools to use for this TODO
+    // ============================================================
+
+    const toolDefinitions = AITools.getToolDefinitions();
+
+    const model = this.genAI.getGenerativeModel({
+      model: this.model,
+      tools: [
+        {
+          functionDeclarations: toolDefinitions.map(t => ({
+            name: t.name,
+            description: t.description,
+            parameters: {
+              type: t.parameters.type as SchemaType,
+              properties: t.parameters.properties,
+              required: t.parameters.required
+            }
+          }))
+        }
+      ],
+      generationConfig: {
+        temperature: 0.1,
+      },
+    });
 
     // Build context from completed TODOs
-    const completedContext = completedEdits
-      .map(({ todo, edit }) => {
-        return `✓ TODO ${todo.order_index}: ${todo.title} (${edit.file})
-Action: ${edit.action}
-${edit.newCode ? `Code:\n\`\`\`\n${edit.newCode.substring(0, 500)}${edit.newCode.length > 500 ? '...' : ''}\n\`\`\`` : ''}`;
-      })
-      .join('\n\n');
+    const completedContext = completedEdits.length > 0
+      ? completedEdits
+          .map(({ todo, edits }) => {
+            const editsSummary = edits.map(e => `  - ${e.action} in ${e.file}`).join('\n');
+            return `✓ TODO ${todo.order_index}: ${todo.title}\n${editsSummary}`;
+          })
+          .join('\n\n')
+      : 'This is the first TODO.';
 
-    // Build execution prompt
-    const prompt = this.buildExecutionPrompt(
+    // Initial prompt to decide tool usage
+    const initialPrompt = `You are an AI agent executing a specific TODO from a larger development plan.
+
+Original User Request: "${userMessage}"
+
+Overall Plan:
+${planExplanation}
+
+Completed TODOs So Far:
+${completedContext}
+
+Current TODO to Execute:
+Order: ${currentTodo.order_index}
+Title: ${currentTodo.title}
+Description: ${currentTodo.description}
+
+IMPORTANT: You have access to powerful tools to help you complete this task:
+${toolDefinitions.map(t => `- ${t.name}: ${t.description}`).join('\n')}
+
+YOUR TASK:
+1. **Analyze** what you need to accomplish this TODO
+2. **Decide** which tools to use (you can use multiple tools):
+   - Use search_codebase to find relevant existing code
+   - Use read_file to read specific files you need to understand or modify
+   - Use search_web if you need documentation, API references, or best practices
+   - Use get_chat_history if this relates to previous conversation
+3. **Call the tools** you need to gather context
+
+CRITICAL:
+- ALWAYS start by searching the codebase to find relevant files
+- Read files you need to understand before making changes
+- Look up documentation if you're implementing something new
+- Be thorough - it's better to gather too much context than too little
+
+If you need tools, call them now. If not (rare), explain why you don't need them.`;
+
+    console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Phase 1 - Tool selection...`);
+    const phase1Result = await this.retryWithBackoff(
+      () => model.generateContent(initialPrompt),
+      taskId,
+      `TODO ${currentTodo.order_index} tool selection`
+    );
+    const phase1Response = phase1Result.response;
+
+    // Check if LLM wants to use tools
+    const functionCalls = phase1Response.functionCalls();
+    let toolResults: ToolResult[] = [];
+
+    if (functionCalls && functionCalls.length > 0) {
+      // ============================================================
+      // PHASE 2: Execute tools that LLM requested
+      // ============================================================
+      console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Phase 2 - Executing ${functionCalls.length} tool(s)...`);
+
+      const toolContext: ToolContext = {
+        projectId,
+        sessionId: undefined,
+        chroma: this.chroma,
+        embeddings: this.embeddings,
+        fileEditService: this.fileEditService,
+        db: this.db,
+        exaApiKey: this.exaApiKey,
+      };
+
+      // Execute all tools in parallel
+      const toolPromises = functionCalls.map(async (call) => {
+        console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Executing tool: ${call.name}`);
+        return await AITools.executeTool(
+          call.name,
+          call.args,
+          toolContext
+        );
+      });
+
+      toolResults = await Promise.all(toolPromises);
+      console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Tools executed successfully`);
+    } else {
+      console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: No tools requested`);
+    }
+
+    // ============================================================
+    // PHASE 3: Generate edits with tool results
+    // ============================================================
+    console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Phase 3 - Generating edits...`);
+
+    const toolResultsText = this.formatToolResults(toolResults);
+    const executionPrompt = this.buildExecutionPrompt(
       userMessage,
       planExplanation,
       currentTodo,
-      vectorContext,
-      completedContext
+      completedContext,
+      toolResultsText
     );
 
-    // Call LLM with retry logic
-    const model = this.genAI.getGenerativeModel({
+    const finalModel = this.genAI.getGenerativeModel({
       model: this.model,
       generationConfig: {
         maxOutputTokens: this.maxTokens,
@@ -387,82 +525,190 @@ ${edit.newCode ? `Code:\n\`\`\`\n${edit.newCode.substring(0, 500)}${edit.newCode
       },
     });
 
-    const result = await this.retryWithBackoff(
-      () => model.generateContent(prompt),
+    const finalResult = await this.retryWithBackoff(
+      () => finalModel.generateContent(executionPrompt),
       taskId,
-      `Generate edit for TODO ${currentTodo.order_index}`
+      `Generate edits for TODO ${currentTodo.order_index}`
     );
-    const response = result.response.text();
+    const response = finalResult.response.text();
 
-    // Parse edit
+    // Parse edits (can now return multiple edits)
     const { edits } = this.aiEditService.parseEdits(response);
 
     if (edits.length === 0) {
-      throw new Error('No edit generated by LLM');
+      throw new Error('No edits generated by LLM');
     }
 
-    return edits[0];
+    console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Generated ${edits.length} edit(s)`);
+    return edits;
   }
 
   /**
-   * Build execution prompt for individual TODO
+   * Format tool results for LLM consumption
+   */
+  private formatToolResults(results: ToolResult[]): string {
+    if (results.length === 0) {
+      return 'No tools were used.';
+    }
+
+    return results.map((result, index) => {
+      if (!result.success) {
+        return `[Tool ${index + 1}] ${result.toolName} - FAILED\nError: ${result.error}`;
+      }
+
+      let formatted = `[Tool ${index + 1}] ${result.toolName} - SUCCESS\n`;
+
+      switch (result.toolName) {
+        case 'search_codebase':
+          formatted += `Query: "${result.data.query}"\n`;
+          formatted += `Found ${result.data.resultsCount} results:\n\n`;
+          result.data.results.forEach((r: any) => {
+            formatted += `[${r.index}] ${r.filePath}:${r.startLine}-${r.endLine}`;
+            if (r.chunkName) {
+              formatted += ` (${r.chunkType}: ${r.chunkName})`;
+            }
+            formatted += ` [similarity: ${r.similarity.toFixed(2)}]\n\`\`\`\n${r.code}\n\`\`\`\n\n`;
+          });
+          break;
+
+        case 'read_file':
+          formatted += `File: ${result.data.filePath}\n`;
+          formatted += `Lines: ${result.data.lines} | Size: ${result.data.size} bytes\n`;
+          formatted += `\`\`\`\n${result.data.content}\n\`\`\`\n`;
+          break;
+
+        case 'read_project':
+          formatted += `Project: ${result.data.projectPath}\n`;
+          formatted += `Total Files: ${result.data.summary.totalFiles}\n`;
+          formatted += `Total Directories: ${result.data.summary.totalDirectories}\n`;
+          formatted += `\n${JSON.stringify(result.data, null, 2)}\n`;
+          break;
+
+        case 'search_web':
+          formatted += `Query: "${result.data.query}"\n`;
+          formatted += `Found ${result.data.resultsCount} results:\n\n`;
+          result.data.results.forEach((r: any, i: number) => {
+            formatted += `[${i + 1}] ${r.title}\n`;
+            formatted += `URL: ${r.url}\n`;
+            formatted += `${r.text}\n\n`;
+          });
+          break;
+
+        case 'get_chat_history':
+          formatted += `Retrieved ${result.data.messageCount} messages:\n\n`;
+          result.data.messages.forEach((msg: any) => {
+            formatted += `[${msg.timestamp}] ${msg.role.toUpperCase()}: ${msg.content}\n\n`;
+          });
+          break;
+
+        default:
+          formatted += JSON.stringify(result.data, null, 2);
+      }
+
+      return formatted;
+    }).join('\n---\n\n');
+  }
+
+  /**
+   * Build execution prompt for individual TODO (now with tool results and JSON output)
    */
   private buildExecutionPrompt(
     userMessage: string,
     planExplanation: string,
     currentTodo: AIEditTodo,
-    vectorContext: string,
-    completedContext: string
+    completedContext: string,
+    toolResultsText: string
   ): string {
-    return `You are implementing a specific TODO from a larger plan.
+    return `You are implementing a specific TODO from a larger development plan.
 
 Original User Request: "${userMessage}"
 
 Overall Plan:
 ${planExplanation}
 
-${completedContext ? `Completed TODOs So Far:\n${completedContext}\n` : 'This is the first TODO.\n'}
+Completed TODOs So Far:
+${completedContext}
 
 Current TODO to Implement:
 Order: ${currentTodo.order_index}
 Title: ${currentTodo.title}
 Description: ${currentTodo.description}
-File: ${currentTodo.file_path}
 
-Codebase Context:
-${vectorContext}
+Context Gathered from Tools:
+${toolResultsText}
 
-TASK: Implement ONLY this TODO. Provide complete, production-ready code.
+TASK: Implement this TODO using the context you gathered. Generate code edits in JSON format.
 
-Respond with a SINGLE <edit> tag using this format:
+CRITICAL: Output your response as a JSON object with the following structure:
 
-For creating a new file:
-<edit file="${currentTodo.file_path}" action="create">
-[Complete file content with all imports, exports, and implementation]
-</edit>
+\`\`\`json
+{
+  "explanation": "Brief explanation of what changes you're making and why",
+  "edits": [
+    {
+      "file": "path/to/file.ts",
+      "action": "create|replace|insert|delete",
+      "startLine": 10,  // Required for replace/delete
+      "endLine": 20,    // Required for replace/delete
+      "afterLine": 5,   // Required for insert
+      "oldCode": "exact code to replace or delete",  // Required for replace/delete
+      "newCode": "new code to insert or use as replacement",  // Required for create/replace/insert
+      "explanation": "Why this specific edit is needed"  // Optional but recommended
+    }
+  ]
+}
+\`\`\`
 
-For modifying an existing file:
-<edit file="${currentTodo.file_path}" start="10" end="25" action="replace">
-[Exact old code to replace]
----
-[Complete new code]
-</edit>
+EDIT ACTIONS:
+1. **create**: Create a new file (only newCode needed, entire file content)
+2. **replace**: Replace existing code (needs startLine, endLine, oldCode, newCode)
+3. **insert**: Insert new code after a line (needs afterLine, newCode)
+4. **delete**: Delete existing code (needs startLine, endLine, oldCode)
 
-For inserting into an existing file:
-<edit file="${currentTodo.file_path}" after="5" action="insert">
-[New code to insert]
-</edit>
+CRITICAL RULES:
+1. **Multiple edits allowed** - Include multiple objects in the edits array for multi-file changes
+2. **Use exact file paths** - Use the paths you discovered through tools
+3. **Match old code exactly** - For replace/delete, oldCode must match file content exactly
+4. **Complete code** - Provide full, working implementations, not snippets
+5. **All imports** - Include all necessary imports and dependencies
+6. **Production-ready** - Follow best practices, handle errors, add types
+7. **Leverage completed TODOs** - Use types/functions from previous TODOs
+8. **Stay focused** - Only implement THIS TODO, not future ones
+9. **Valid JSON** - Ensure your response is valid JSON that can be parsed
 
-RULES:
-1. Focus ONLY on this TODO
-2. Use types/code from completed TODOs if applicable
-3. Provide complete, working code (not snippets)
-4. Include all necessary imports
-5. Follow best practices and coding standards
-6. Ensure code is production-ready
-7. If creating a new file, provide the ENTIRE file content
+Example Response:
 
-Implement this TODO now:`;
+\`\`\`json
+{
+  "explanation": "Creating user type definitions and updating imports to use the new types",
+  "edits": [
+    {
+      "file": "src/types/user.ts",
+      "action": "create",
+      "newCode": "export interface User {\n  id: string;\n  email: string;\n  name: string;\n  createdAt: Date;\n}\n\nexport interface UserSession {\n  user: User;\n  token: string;\n  expiresAt: Date;\n}",
+      "explanation": "New file with user-related type definitions"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "action": "replace",
+      "startLine": 1,
+      "endLine": 2,
+      "oldCode": "import { Request, Response } from 'express';",
+      "newCode": "import { Request, Response } from 'express';\nimport { User, UserSession } from '../types/user';",
+      "explanation": "Adding import for new user types"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "action": "insert",
+      "afterLine": 20,
+      "newCode": "\nexport function validateUser(user: User): boolean {\n  return !!(user.email && user.name && user.id);\n}",
+      "explanation": "Adding user validation helper function"
+    }
+  ]
+}
+\`\`\`
+
+Now implement this TODO and respond with ONLY the JSON object:`;
   }
 
   /**
@@ -516,15 +762,15 @@ Implement this TODO now:`;
   }
 
   /**
-   * Save TODO edit
+   * Save TODO edits (now supports multiple edits)
    */
-  private async saveTodoEdit(todoId: string, edit: CodeEdit): Promise<void> {
+  private async saveTodoEdits(todoId: string, edits: CodeEdit[]): Promise<void> {
     const now = Date.now();
     this.db.getDb().prepare(`
       UPDATE ai_edit_todos
       SET edit_json = ?, updated_at = ?
       WHERE todo_id = ?
-    `).run(JSON.stringify(edit), now, todoId);
+    `).run(JSON.stringify(edits), now, todoId);
   }
 
   /**
@@ -573,22 +819,22 @@ Implement this TODO now:`;
   }
 
   /**
-   * Generate final summary
+   * Generate final summary (updated for multiple edits per TODO)
    */
   private async generateFinalSummary(
     taskId: string,
-    completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }>
+    completedEdits: Array<{ todo: AIEditTodo; edits: CodeEdit[] }>
   ): Promise<string> {
-    const edits = completedEdits.map(c => c.edit);
+    const allEdits = completedEdits.flatMap(c => c.edits);
 
-    const creates = edits.filter(e => e.action === 'create').length;
-    const replaces = edits.filter(e => e.action === 'replace').length;
-    const inserts = edits.filter(e => e.action === 'insert').length;
-    const deletes = edits.filter(e => e.action === 'delete').length;
-    const affectedFiles = [...new Set(edits.map(e => e.file))];
+    const creates = allEdits.filter(e => e.action === 'create').length;
+    const replaces = allEdits.filter(e => e.action === 'replace').length;
+    const inserts = allEdits.filter(e => e.action === 'insert').length;
+    const deletes = allEdits.filter(e => e.action === 'delete').length;
+    const affectedFiles = [...new Set(allEdits.map(e => e.file))];
 
     const summary = {
-      totalEdits: edits.length,
+      totalEdits: allEdits.length,
       creates,
       replaces,
       inserts,
@@ -614,7 +860,7 @@ Implement this TODO now:`;
   }
 
   /**
-   * Save chat message for progressive edit
+   * Save chat message for progressive edit (updated for multiple edits per TODO)
    */
   private async saveChatMessage(
     sessionId: string,
@@ -622,7 +868,7 @@ Implement this TODO now:`;
     userId: string,
     userMessage: string,
     plan: ParsedPlan,
-    completedEdits: Array<{ todo: AIEditTodo; edit: CodeEdit }>
+    completedEdits: Array<{ todo: AIEditTodo; edits: CodeEdit[] }>
   ): Promise<void> {
     const now = Date.now();
     const messageId = uuidv4();
@@ -640,17 +886,20 @@ Implement this TODO now:`;
       `).run(sessionId, projectId, userId, null, now, now);
     }
 
+    // Flatten all edits
+    const allEdits = completedEdits.flatMap(({ edits }) => edits);
+
     // Prepare metadata with edits and explanation
     const metadata = {
       explanation: plan.explanation,
-      edits: completedEdits.map(({ edit }) => edit),
+      edits: allEdits,
       summary: {
-        totalEdits: completedEdits.length,
-        creates: completedEdits.filter(({ edit }) => edit.action === 'create').length,
-        replaces: completedEdits.filter(({ edit }) => edit.action === 'replace').length,
-        inserts: completedEdits.filter(({ edit }) => edit.action === 'insert').length,
-        deletes: completedEdits.filter(({ edit }) => edit.action === 'delete').length,
-        affectedFiles: [...new Set(completedEdits.map(({ edit }) => edit.file))]
+        totalEdits: allEdits.length,
+        creates: allEdits.filter(e => e.action === 'create').length,
+        replaces: allEdits.filter(e => e.action === 'replace').length,
+        inserts: allEdits.filter(e => e.action === 'insert').length,
+        deletes: allEdits.filter(e => e.action === 'delete').length,
+        affectedFiles: [...new Set(allEdits.map(e => e.file))]
       },
       contextChunks: [],
       mode: 'progressive'
@@ -702,7 +951,7 @@ Implement this TODO now:`;
       description: row.description,
       filePath: row.file_path,
       status: row.status as TodoStatus,
-      edit: row.edit_json ? JSON.parse(row.edit_json) : null,
+      edits: row.edit_json ? JSON.parse(row.edit_json) : [], // Now returns array of edits
       errorMessage: row.error_message,
       completedAt: row.completed_at
     }));

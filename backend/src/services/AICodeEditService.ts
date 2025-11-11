@@ -25,9 +25,75 @@ export class AICodeEditService {
 
   /**
    * Parse LLM response and extract structured edits
-   * Format: <edit file="path" start="10" end="15" action="replace">...</edit>
+   * Supports both JSON and XML formats (JSON preferred)
    */
   parseEdits(llmResponse: string): { explanation: string; edits: CodeEdit[] } {
+    // Try JSON format first (new format)
+    try {
+      return this.parseJsonEdits(llmResponse);
+    } catch (jsonError) {
+      // Fallback to XML format (legacy)
+      return this.parseXmlEdits(llmResponse);
+    }
+  }
+
+  /**
+   * Parse JSON format edits (NEW FORMAT - preferred)
+   * Format:
+   * {
+   *   "explanation": "...",
+   *   "edits": [
+   *     {
+   *       "file": "path/to/file.ts",
+   *       "action": "replace",
+   *       "startLine": 10,
+   *       "endLine": 15,
+   *       "oldCode": "...",
+   *       "newCode": "..."
+   *     }
+   *   ]
+   * }
+   */
+  private parseJsonEdits(llmResponse: string): { explanation: string; edits: CodeEdit[] } {
+    // Extract JSON block from markdown code fence if present
+    let jsonText = llmResponse;
+    const jsonBlockMatch = llmResponse.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonBlockMatch) {
+      jsonText = jsonBlockMatch[1];
+    } else {
+      // Try to find JSON object
+      const jsonMatch = llmResponse.match(/\{[\s\S]*"edits"[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[0];
+      }
+    }
+
+    const parsed = JSON.parse(jsonText);
+
+    if (!parsed.edits || !Array.isArray(parsed.edits)) {
+      throw new Error('Invalid JSON format: missing edits array');
+    }
+
+    return {
+      explanation: parsed.explanation || '',
+      edits: parsed.edits.map((edit: any) => ({
+        file: edit.file,
+        action: edit.action as EditAction,
+        startLine: edit.startLine,
+        endLine: edit.endLine,
+        afterLine: edit.afterLine,
+        oldCode: edit.oldCode,
+        newCode: edit.newCode,
+        explanation: edit.explanation,
+      })),
+    };
+  }
+
+  /**
+   * Parse XML format edits (LEGACY FORMAT - for backward compatibility)
+   * Format: <edit file="path" start="10" end="15" action="replace">...</edit>
+   */
+  private parseXmlEdits(llmResponse: string): { explanation: string; edits: CodeEdit[] } {
     // Extract plain text explanation (everything outside <edit> tags)
     const explanation = llmResponse
       .replace(/<edit[^>]*>[\s\S]*?<\/edit>/g, '')
