@@ -6,6 +6,7 @@ import SecurityFeatures from '../components/SecurityFeatures';
 import PerformanceFeatures from '../components/PerformanceFeatures';
 import HowItWorks from '../components/HowItWorks';
 import Testimonials from '../components/Testimonials';
+import FAQ from '../components/FAQ';
 import CTA from '../components/CTA';
 import Footer from '../components/Footer';
 import Pricing from '../components/pricing';
@@ -17,12 +18,13 @@ const LandingPage = () => {
       <Hero />
       <Features />
       <WorksWith />
+
       <SecurityFeatures />
       <PerformanceFeatures />
       <HowItWorks />
-
       <Testimonials />
       <Pricing />
+      <FAQ />
       <CTA />
       <Footer />
     </div>

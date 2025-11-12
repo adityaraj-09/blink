@@ -194,67 +194,7 @@ const Pricing = () => {
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-24 bg-gradient-to-b from-black to-black/50">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center mb-12">
-            Frequently Asked <span className="text-primary">Questions</span>
-          </h2>
-
-          <div className="space-y-6">
-            {[
-              {
-                q: 'Can I change plans later?',
-                a: 'Yes! You can upgrade, downgrade, or cancel your plan at any time. Changes take effect at the start of your next billing cycle.'
-              },
-              {
-                q: 'Is there a free trial?',
-                a: 'Absolutely! All paid plans come with a 14-day free trial. No credit card required to start.'
-              },
-              {
-                q: 'What payment methods do you accept?',
-                a: 'We accept all major credit cards (Visa, MasterCard, American Express) and PayPal. Enterprise customers can also pay via invoice.'
-              },
-              {
-                q: 'Can I get a refund?',
-                a: 'Yes, we offer a 30-day money-back guarantee. If you\'re not satisfied, contact us for a full refund.'
-              },
-              {
-                q: 'Do you offer discounts for students or non-profits?',
-                a: 'Yes! We offer special discounts for students, educators, and non-profit organizations. Contact our sales team for more information.'
-              }
-            ].map((faq, index) => (
-              <div
-                key={index}
-                className="relative rounded-xl group"
-              >
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-secondary/20 blur-lg group-hover:from-primary/30 group-hover:to-secondary/30 transition-all duration-300"></div>
-                <div className="relative bg-[#1a1f26]/80 backdrop-blur-sm rounded-xl p-6 transition-all shadow-xl">
-                  <h3 className="text-xl font-semibold mb-3">{faq.q}</h3>
-                  <p className="text-gray-400">{faq.a}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 blur-3xl"></div>
-
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold mb-6">
-            Still have questions?
-          </h2>
-          <p className="text-xl text-gray-400 mb-8">
-            Our team is here to help. Get in touch and we'll answer all your questions.
-          </p>
-          <button className="px-8 py-4 bg-primary hover:bg-secondary text-white rounded-lg font-semibold transition-all transform hover:scale-105">
-            Contact Sales Team
-          </button>
-        </div>
-      </section>
+    
 
     </div>
   );
