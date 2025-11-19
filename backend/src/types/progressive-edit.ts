@@ -73,6 +73,7 @@ export interface TaskStatusResponse {
   taskId: string;
   status: TaskStatus;
   explanation: string | null;
+  errorMessage?: string;  // Error message when task fails
   progress: {
     total: number;
     completed: number;
@@ -86,7 +87,7 @@ export interface TaskStatusResponse {
     description: string | null;
     filePath: string | null;
     status: TodoStatus;
-    edit: CodeEdit | null;
+    edits: CodeEdit[];  // Array of edits (a TODO can generate multiple edits)
     errorMessage: string | null;
     completedAt: number | null;
   }>;

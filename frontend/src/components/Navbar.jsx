@@ -52,7 +52,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             <SignedOut>
               <Link to="/sign-in">
-                <button className="px-6 py-2 bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white rounded-lg transition-all transform hover:scale-105">
+                <button className="px-6 py-2 bg-linear-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white rounded-lg transition-all transform hover:scale-105">
                   Sign In
                 </button>
               </Link>
@@ -129,7 +129,7 @@ const Navbar = () => {
             <div className="pt-4 border-t border-primary/20">
               <SignedOut>
                 <Link to="/sign-in" onClick={() => setIsOpen(false)}>
-                  <button className="w-full px-6 py-2 bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white rounded-lg transition-all">
+                  <button className="w-full px-6 py-2 bg-linear-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white rounded-lg transition-all">
                     Sign In
                   </button>
                 </Link>

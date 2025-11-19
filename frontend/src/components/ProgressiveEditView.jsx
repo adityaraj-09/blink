@@ -20,65 +20,69 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
     if (!taskStatus || !taskStatus.todos || !onFilesChange) return;
 
     const completedTodos = taskStatus.todos.filter(
-      todo => todo.status === 'completed' && todo.edit && !appliedTodosRef.current.has(todo.todoId)
+      todo => todo.status === 'completed' && todo.edits && todo.edits.length > 0 && !appliedTodosRef.current.has(todo.todoId)
     );
 
     if (completedTodos.length === 0) return;
 
-    console.log('[ProgressiveEdit] Auto-applying', completedTodos.length, 'completed edits');
+    console.log('[ProgressiveEdit] Auto-applying', completedTodos.length, 'completed TODOs');
 
     completedTodos.forEach(todo => {
-      const edit = todo.edit;
       appliedTodosRef.current.add(todo.todoId);
 
-      try {
-        if (edit.action === 'create') {
-          // Create new file
-          console.log(`[ProgressiveEdit] Creating file: ${edit.file}`);
-          if (onFileCreate) {
-            onFileCreate(edit.file, edit.newCode || '');
+      // Apply all edits for this TODO
+      todo.edits.forEach((edit, index) => {
+        try {
+          console.log(`[ProgressiveEdit] Applying edit ${index + 1}/${todo.edits.length} for TODO ${todo.order}`);
+
+          if (edit.action === 'create') {
+            // Create new file
+            console.log(`[ProgressiveEdit] Creating file: ${edit.file}`);
+            if (onFileCreate) {
+              onFileCreate(edit.file, edit.newCode || '');
+            }
+          } else if (edit.action === 'replace') {
+            // Replace entire file
+            console.log(`[ProgressiveEdit] Replacing file: ${edit.file}`);
+            const updatedContents = {
+              ...fileContents,
+              [edit.file]: edit.newCode || ''
+            };
+            onFilesChange(updatedContents, edit.file);
+          } else if (edit.action === 'insert') {
+            // Insert at specific line
+            console.log(`[ProgressiveEdit] Inserting into file: ${edit.file} at line ${edit.afterLine}`);
+            const existingContent = fileContents[edit.file] || '';
+            const lines = existingContent.split('\n');
+            const insertLine = edit.afterLine !== undefined ? edit.afterLine : lines.length;
+            lines.splice(insertLine + 1, 0, edit.newCode || '');
+            const newContent = lines.join('\n');
+
+            const updatedContents = {
+              ...fileContents,
+              [edit.file]: newContent
+            };
+            onFilesChange(updatedContents, edit.file);
+          } else if (edit.action === 'delete') {
+            // Delete lines
+            console.log(`[ProgressiveEdit] Deleting from file: ${edit.file}`);
+            const existingContent = fileContents[edit.file] || '';
+            const lines = existingContent.split('\n');
+            const startLine = edit.startLine || 0;
+            const endLine = edit.endLine || startLine;
+            lines.splice(startLine, endLine - startLine + 1);
+            const newContent = lines.join('\n');
+
+            const updatedContents = {
+              ...fileContents,
+              [edit.file]: newContent
+            };
+            onFilesChange(updatedContents, edit.file);
           }
-        } else if (edit.action === 'replace') {
-          // Replace entire file
-          console.log(`[ProgressiveEdit] Replacing file: ${edit.file}`);
-          const updatedContents = {
-            ...fileContents,
-            [edit.file]: edit.newCode || ''
-          };
-          onFilesChange(updatedContents, edit.file);
-        } else if (edit.action === 'insert') {
-          // Insert at specific line
-          console.log(`[ProgressiveEdit] Inserting into file: ${edit.file} at line ${edit.line}`);
-          const existingContent = fileContents[edit.file] || '';
-          const lines = existingContent.split('\n');
-          const insertLine = edit.line || lines.length;
-          lines.splice(insertLine, 0, edit.newCode || '');
-          const newContent = lines.join('\n');
-
-          const updatedContents = {
-            ...fileContents,
-            [edit.file]: newContent
-          };
-          onFilesChange(updatedContents, edit.file);
-        } else if (edit.action === 'delete') {
-          // Delete lines
-          console.log(`[ProgressiveEdit] Deleting from file: ${edit.file}`);
-          const existingContent = fileContents[edit.file] || '';
-          const lines = existingContent.split('\n');
-          const startLine = edit.startLine || 0;
-          const endLine = edit.endLine || startLine;
-          lines.splice(startLine, endLine - startLine + 1);
-          const newContent = lines.join('\n');
-
-          const updatedContents = {
-            ...fileContents,
-            [edit.file]: newContent
-          };
-          onFilesChange(updatedContents, edit.file);
+        } catch (err) {
+          console.error(`[ProgressiveEdit] Failed to apply edit ${index + 1} for ${todo.todoId}:`, err);
         }
-      } catch (err) {
-        console.error(`[ProgressiveEdit] Failed to apply edit for ${todo.todoId}:`, err);
-      }
+      });
     });
   }, [taskStatus, fileContents, onFilesChange, onFileCreate]);
 
@@ -165,8 +169,14 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
           {/* Progress Bar */}
           <div className="mb-2">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-semibold text-gray-300">
-                {taskStatus.status === 'completed' ? 'Completed' : taskStatus.status === 'processing' ? 'Processing' : 'Planning'}
+              <span className={`font-semibold ${taskStatus.status === 'failed' ? 'text-red-400' : 'text-gray-300'}`}>
+                {taskStatus.status === 'completed'
+                  ? 'Completed'
+                  : taskStatus.status === 'failed'
+                  ? 'Failed'
+                  : taskStatus.status === 'processing'
+                  ? 'Processing'
+                  : 'Planning'}
               </span>
               <span className="text-gray-400">
                 {taskStatus.progress.completed}/{taskStatus.progress.total} steps
@@ -174,7 +184,11 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
             </div>
             <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-300"
+                className={`h-full transition-all duration-300 ${
+                  taskStatus.status === 'failed'
+                    ? 'bg-gradient-to-r from-red-500 to-red-600'
+                    : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                }`}
                 style={{ width: `${taskStatus.progress.percentage}%` }}
               />
             </div>
@@ -213,8 +227,34 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
             </div>
           )}
 
+          {/* Failure Summary - Scrollable */}
+          {taskStatus.status === 'failed' && (
+            <div className="mt-2 p-2 bg-red-900/20 border border-red-500/30 rounded text-xs max-h-32 overflow-y-auto">
+              <div className="flex items-center gap-2 mb-2">
+                <XCircle size={14} className="text-red-400" />
+                <span className="font-semibold text-red-300">Task Failed</span>
+              </div>
+              <div className="text-gray-300 space-y-1">
+                {taskStatus.errorMessage && (
+                  <div className="text-red-200">
+                    {taskStatus.errorMessage}
+                  </div>
+                )}
+                {taskStatus.progress && (
+                  <div className="text-gray-400 mt-1">
+                    Completed {taskStatus.progress.completed} out of {taskStatus.progress.total} steps before failing.
+                  </div>
+                )}
+                <div className="text-yellow-300 mt-2 text-xs flex items-start gap-1">
+                  <AlertCircle size={12} className="flex-shrink-0 mt-0.5" />
+                  <span>The task encountered an error and could not complete. You can try again or modify your request.</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Cancel Button */}
-          {isRunning && taskStatus.status !== 'completed' && (
+          {isRunning && taskStatus.status !== 'completed' && taskStatus.status !== 'failed' && (
             <button
               onClick={onCancel}
               className="mt-2 w-full px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded text-xs font-medium transition-colors flex items-center justify-center gap-2"
@@ -281,31 +321,38 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
                         <div className="text-xs text-gray-400 mb-1">{todo.description}</div>
                         <div className="text-xs text-gray-500 mb-2">📁 {todo.filePath}</div>
 
-                        {/* Show edit if completed */}
-                        {isCompleted && todo.edit && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-gray-400">
-                                Action: <span className="text-blue-300">{todo.edit.action}</span>
-                              </span>
-                              {todo.edit.newCode && (
-                                <button
-                                  onClick={() => copyCode(todo.edit.newCode)}
-                                  className="p-1 hover:bg-white/10 rounded transition-colors"
-                                  title="Copy code"
-                                >
-                                  <Copy size={12} className="text-gray-400" />
-                                </button>
-                              )}
+                        {/* Show edits if completed */}
+                        {isCompleted && todo.edits && todo.edits.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            <div className="text-xs text-gray-400">
+                              Generated {todo.edits.length} edit{todo.edits.length !== 1 ? 's' : ''}
                             </div>
-                            {todo.edit.newCode && (
-                              <pre className="text-xs bg-black/30 p-2 rounded overflow-x-auto max-h-40 border border-gray-700">
-                                <code className="text-gray-300">
-                                  {todo.edit.newCode.substring(0, 300)}
-                                  {todo.edit.newCode.length > 300 && '...'}
-                                </code>
-                              </pre>
-                            )}
+                            {todo.edits.map((edit, editIndex) => (
+                              <div key={editIndex} className="border-l-2 border-gray-600 pl-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-gray-400">
+                                    {editIndex + 1}. <span className="text-blue-300">{edit.action}</span> in <span className="text-gray-300">{edit.file}</span>
+                                  </span>
+                                  {edit.newCode && (
+                                    <button
+                                      onClick={() => copyCode(edit.newCode)}
+                                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                                      title="Copy code"
+                                    >
+                                      <Copy size={12} className="text-gray-400" />
+                                    </button>
+                                  )}
+                                </div>
+                                {edit.newCode && (
+                                  <pre className="text-xs bg-black/30 p-2 rounded overflow-x-auto max-h-40 border border-gray-700">
+                                    <code className="text-gray-300">
+                                      {edit.newCode.substring(0, 200)}
+                                      {edit.newCode.length > 200 && '...'}
+                                    </code>
+                                  </pre>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
 
@@ -326,6 +373,15 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
               })}
             </div>
           </>
+        ) : taskStatus?.status === 'failed' ? (
+          // Task failed - don't show "Planning steps..." or loading spinner
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-gray-400">
+              <XCircle size={32} className="text-red-400 mx-auto mb-3" />
+              <p className="text-sm">Task execution failed</p>
+              <p className="text-xs text-gray-500 mt-1">Check the details above for more information</p>
+            </div>
+          </div>
         ) : error && !isRunning ? (
           // Only show fatal error when task is NOT running
           // If task is running, transient errors are shown in the header as warnings

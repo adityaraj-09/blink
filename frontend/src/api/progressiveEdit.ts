@@ -27,7 +27,7 @@ export interface TodoItem {
   description: string;
   filePath: string;
   status: TodoStatus;
-  edit: CodeEdit | null;
+  edits: CodeEdit[];  // Array of edits (a TODO can generate multiple edits)
   errorMessage?: string;
   completedAt?: number;
 }
@@ -43,6 +43,7 @@ export interface TaskStatusResponse {
   taskId: string;
   status: 'planning' | 'processing' | 'completed' | 'failed' | 'cancelled';
   explanation?: string;
+  errorMessage?: string;  // Error message when task fails
   progress: TaskProgress;
   todos: TodoItem[];
   createdAt: number;

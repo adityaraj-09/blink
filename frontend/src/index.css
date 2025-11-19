@@ -2,10 +2,11 @@
 
 
 @theme {
-  /* Colors */
-  --color-primary: #365eff;
-  --color-secondary: #4d70ff;
-  --color-dark-bg: #242930;
+  /* User-specified blue gradient palette */
+  --color-primary: #266eff;
+  --color-secondary: #7eaffe;
+  --color-accent: #132aff;
+  --color-dark-bg: #0b0f14; /* near-black background */
 
   /* Font Family */
   --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
@@ -22,9 +23,36 @@
 
 body {
   font-family: 'Space Grotesk', sans-serif;
-  background-color: #1e2329;
+  background-color: var(--color-dark-bg);
   color: white;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* Global decorative background (soft radial glows + subtle grid) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10vmax;
+  z-index: -2;
+  background:
+    radial-gradient(60rem 40rem at 15% 10%, color-mix(in oklab, var(--color-primary) 35%, transparent), transparent 60%),
+    radial-gradient(70rem 45rem at 85% 70%, color-mix(in oklab, var(--color-secondary) 25%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 40%);
+  filter: blur(0px);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(to right, rgba(76,111,255,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(76,111,255,0.05) 1px, transparent 1px);
+  background-size: 4rem 4rem;
+  mask-image: radial-gradient(60rem 60rem at 50% 20%, black, transparent 70%);
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 /* Custom animation delays */
@@ -39,4 +67,55 @@ body {
 
 .delay-1000 {
   animation-delay: 1000ms;
+}
+
+/* Utilities */
+.gradient-text {
+  background-image: var(--g-a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: color-mix(in oklab, white 6%, transparent);
+  -webkit-backdrop-filter: saturate(1.2) blur(12px);
+  backdrop-filter: saturate(1.2) blur(12px);
+  border: 1px solid color-mix(in oklab, white 12%, transparent);
+}
+
+.ring-gradient {
+  position: relative;
+}
+.ring-gradient::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--g-a);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Gradient variables derived from palette (see src/theme/palette.js for JS access) */
+:root {
+  --c0: #132aff;
+  --c1: #7eaffe;
+  --c2: #266eff;
+  --c3: #6498fe;
+  --c4: #154afe;
+  --c5: #3282ff;
+  --c6: #1417ff;
+  --c7: #143bfe;
+  --c8: #175aff;
+
+  --g-a: linear-gradient(135deg, var(--c0), var(--c1));
+  --g-b: linear-gradient(135deg, var(--c2), var(--c3));
+  --g-c: linear-gradient(135deg, var(--c4), var(--c5));
+  --g-d: linear-gradient(135deg, var(--c6), var(--c7));
+  --g-e: linear-gradient(135deg, var(--c7), var(--c8));
 }
