@@ -23,6 +23,7 @@ import { cpp } from '@codemirror/lang-cpp';
 import { java } from '@codemirror/lang-java';
 import InlineEditWidget from './InlineEditWidget';
 import { getInlineEdit } from '../api/aiEdit';
+import { locateEdit } from '../utils/fuzzyMatch';
 
 /**
  * Get language extension
@@ -313,6 +314,25 @@ const CodeMirrorEditorWithInlineEdit = ({
           fullFileContent: view.state.doc.toString(),
         });
 
+        // Pre-calculate fuzzy matches for better UI feedback
+        if (response.edits) {
+          const currentDoc = view.state.doc.toString();
+          response.edits = response.edits.map(edit => {
+            if (edit.action === 'replace' || edit.action === 'delete') {
+              const match = edit.oldCode 
+                ? locateEdit(currentDoc, edit.oldCode, edit.startLine)
+                : { matchType: 'not_found', confidence: 0 };
+              
+              return {
+                ...edit,
+                matchType: match.matchType,
+                matchConfidence: match.confidence
+              };
+            }
+            return edit;
+          });
+        }
+
         setInlineEditState((prev) => ({
           ...prev,
           isLoading: false,
@@ -399,17 +419,35 @@ const CodeMirrorEditorWithInlineEdit = ({
             if (edit.newCode) {
               let fromPos, toPos;
               
-              // Calculate position based on edit's startLine and endLine (if provided)
-              if (edit.startLine && edit.endLine) {
-                // Use the edit's specific line range
-                const startLineInfo = view.state.doc.line(edit.startLine);
-                const endLineInfo = view.state.doc.line(edit.endLine);
-                fromPos = startLineInfo.from;
-                toPos = endLineInfo.to;
+              // Try to use robust fuzzy locating
+              const currentDoc = view.state.doc.toString();
+              // Only try fuzzy match if oldCode is provided
+              const match = edit.oldCode 
+                ? locateEdit(currentDoc, edit.oldCode, edit.startLine)
+                : { matchType: 'not_found' };
+              
+              if (match.matchType !== 'not_found') {
+                fromPos = match.startIndex;
+                toPos = match.endIndex;
+                console.log(`[FuzzyMatch] Applied edit using ${match.matchType} match (confidence: ${match.confidence})`);
               } else {
-                // Fallback to the original selection range
-                fromPos = context.startPos;
-                toPos = context.endPos;
+                // Fallback to line numbers if fuzzy match fails
+                if (edit.startLine && edit.endLine) {
+                  // Use the edit's specific line range
+                  // Check if lines exist to avoid out of bounds
+                  const docLines = view.state.doc.lines;
+                  const safeStartLine = Math.min(Math.max(1, edit.startLine), docLines);
+                  const safeEndLine = Math.min(Math.max(1, edit.endLine), docLines);
+                  
+                  const startLineInfo = view.state.doc.line(safeStartLine);
+                  const endLineInfo = view.state.doc.line(safeEndLine);
+                  fromPos = startLineInfo.from;
+                  toPos = endLineInfo.to;
+                } else {
+                  // Fallback to the original selection range
+                  fromPos = context.startPos;
+                  toPos = context.endPos;
+                }
               }
 
               changes.push({

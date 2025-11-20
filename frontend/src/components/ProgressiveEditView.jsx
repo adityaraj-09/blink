@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Loader, CheckCircle, XCircle, Circle, AlertCircle, Copy, StopCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { locateEdit } from '../utils/fuzzyMatch';
 
 const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId, fileContents, onFilesChange, onFileCreate }) => {
   // Track which todos have been applied
@@ -42,11 +43,41 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
               onFileCreate(edit.file, edit.newCode || '');
             }
           } else if (edit.action === 'replace') {
-            // Replace entire file
-            console.log(`[ProgressiveEdit] Replacing file: ${edit.file}`);
+            // Replace code (with fuzzy match support)
+            console.log(`[ProgressiveEdit] Replacing in file: ${edit.file}`);
+            const existingContent = fileContents[edit.file] || '';
+            
+            let newContent = '';
+            let applied = false;
+
+            // Try fuzzy match first if oldCode is provided
+            if (edit.oldCode) {
+              const match = locateEdit(existingContent, edit.oldCode, edit.startLine);
+              if (match.matchType !== 'not_found') {
+                console.log(`[ProgressiveEdit] Applied replace using ${match.matchType} match`);
+                const before = existingContent.slice(0, match.startIndex);
+                const after = existingContent.slice(match.endIndex);
+                newContent = before + (edit.newCode || '') + after;
+                applied = true;
+              }
+            }
+
+            // Fallback to line numbers or full file replace
+            if (!applied) {
+              if (edit.startLine && edit.endLine) {
+                const lines = existingContent.split('\n');
+                const before = lines.slice(0, edit.startLine - 1);
+                const after = lines.slice(edit.endLine);
+                newContent = [...before, edit.newCode || '', ...after].join('\n');
+              } else {
+                // Full file replace if no lines specified
+                newContent = edit.newCode || '';
+              }
+            }
+
             const updatedContents = {
               ...fileContents,
-              [edit.file]: edit.newCode || ''
+              [edit.file]: newContent
             };
             onFilesChange(updatedContents, edit.file);
           } else if (edit.action === 'insert') {
@@ -54,8 +85,16 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
             console.log(`[ProgressiveEdit] Inserting into file: ${edit.file} at line ${edit.afterLine}`);
             const existingContent = fileContents[edit.file] || '';
             const lines = existingContent.split('\n');
-            const insertLine = edit.afterLine !== undefined ? edit.afterLine : lines.length;
-            lines.splice(insertLine + 1, 0, edit.newCode || '');
+            
+            // Support startLine (insert at line) or afterLine (insert after line)
+            if (edit.startLine !== undefined) {
+              const insertIndex = edit.startLine - 1;
+              lines.splice(insertIndex, 0, edit.newCode || '');
+            } else {
+              const insertLine = edit.afterLine !== undefined ? edit.afterLine : lines.length;
+              lines.splice(insertLine + 1, 0, edit.newCode || '');
+            }
+            
             const newContent = lines.join('\n');
 
             const updatedContents = {
@@ -64,14 +103,32 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
             };
             onFilesChange(updatedContents, edit.file);
           } else if (edit.action === 'delete') {
-            // Delete lines
+            // Delete lines (with fuzzy match support)
             console.log(`[ProgressiveEdit] Deleting from file: ${edit.file}`);
             const existingContent = fileContents[edit.file] || '';
-            const lines = existingContent.split('\n');
-            const startLine = edit.startLine || 0;
-            const endLine = edit.endLine || startLine;
-            lines.splice(startLine, endLine - startLine + 1);
-            const newContent = lines.join('\n');
+            
+            let newContent = '';
+            let applied = false;
+
+            // Try fuzzy match first if oldCode is provided
+            if (edit.oldCode) {
+              const match = locateEdit(existingContent, edit.oldCode, edit.startLine);
+              if (match.matchType !== 'not_found') {
+                console.log(`[ProgressiveEdit] Applied delete using ${match.matchType} match`);
+                const before = existingContent.slice(0, match.startIndex);
+                const after = existingContent.slice(match.endIndex);
+                newContent = before + after;
+                applied = true;
+              }
+            }
+
+            if (!applied) {
+              const lines = existingContent.split('\n');
+              const startLine = edit.startLine || 0;
+              const endLine = edit.endLine || startLine;
+              lines.splice(startLine - 1, endLine - startLine + 1);
+              newContent = lines.join('\n');
+            }
 
             const updatedContents = {
               ...fileContents,

@@ -874,13 +874,14 @@ EDIT ACTIONS:
 CRITICAL RULES:
 1. **Multiple edits allowed** - Include multiple objects in the edits array for multi-file changes
 2. **Use exact file paths** - Use the paths you discovered through tools
-3. **Match old code exactly** - For replace/delete, oldCode must match file content exactly
-4. **Complete code** - Provide full, working implementations, not snippets
-5. **All imports** - Include all necessary imports and dependencies
-6. **Production-ready** - Follow best practices, handle errors, add types
-7. **Leverage completed TODOs** - Use types/functions from previous TODOs
-8. **Stay focused** - Only implement THIS TODO, not future ones
-9. **Valid JSON** - Ensure your response is valid JSON that can be parsed
+3. **CRITICAL**: Ensure oldCode matches the actual file content EXACTLY, character-for-character. The frontend uses this to locate the edit.
+4. **ANCHORING**: When replacing code, ALWAYS include 2-3 lines of UNIQUE surrounding context in oldCode. This serves as an "anchor" to find the correct location even if line numbers shift.
+5. **Complete code** - Provide full, working implementations, not snippets
+6. **All imports** - Include all necessary imports and dependencies
+7. **Production-ready** - Follow best practices, handle errors, add types
+8. **Leverage completed TODOs** - Use types/functions from previous TODOs
+9. **Stay focused** - Only implement THIS TODO, not future ones
+10. **Valid JSON** - Ensure your response is valid JSON that can be parsed
 
 Example Response:
 

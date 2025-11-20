@@ -8,6 +8,7 @@ import { CheckCircle, XCircle, Eye, Code, Copy, Check, AlertTriangle, ChevronDow
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import CodeMirrorDiffViewer from './CodeMirrorDiffViewer';
+import { locateEdit } from '../utils/fuzzyMatch';
 
 /**
  * Detect language from file extension
@@ -167,7 +168,18 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
       throw new Error('New code is required for replace action');
     }
 
-    // If line numbers are specified, replace those lines
+    // Try fuzzy match first if oldCode is provided
+    if (edit.oldCode) {
+      const match = locateEdit(content, edit.oldCode, edit.startLine);
+      if (match.matchType !== 'not_found') {
+        console.log(`[InstantEdit] Applied replace using ${match.matchType} match (confidence: ${match.confidence})`);
+        const before = content.slice(0, match.startIndex);
+        const after = content.slice(match.endIndex);
+        return before + edit.newCode + after;
+      }
+    }
+
+    // Fallback to line numbers
     if (edit.startLine && edit.endLine) {
       const lines = content.split('\n');
       const before = lines.slice(0, edit.startLine - 1);
@@ -175,15 +187,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
       return [...before, edit.newCode, ...after].join('\n');
     }
 
-    // Otherwise, do string replacement
-    if (edit.oldCode) {
-      if (content.includes(edit.oldCode)) {
-        return content.replace(edit.oldCode, edit.newCode);
-      }
-      throw new Error('Old code not found in file');
-    }
-
-    throw new Error('Replace action requires either line numbers or old code');
+    throw new Error('Replace action requires valid oldCode matching or line numbers');
   };
 
   /**
@@ -195,27 +199,27 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
     }
 
     if (!content) {
-      // New file
       return edit.newCode;
     }
+
+    // If we have a specific insertion point context (not just line numbers), we could fuzzy match here too
+    // But insert usually relies on line numbers or "after line".
+    // Current implementation relies on line numbers which is standard for "insert after".
 
     const lines = content.split('\n');
 
     // Support startLine (insert at line) or afterLine (insert after line)
     if (edit.startLine !== undefined) {
-      // Insert at startLine (pushes existing line down)
       const insertIndex = edit.startLine - 1;
       const before = lines.slice(0, insertIndex);
       const after = lines.slice(insertIndex);
       return [...before, edit.newCode, ...after].join('\n');
     } else if (edit.afterLine !== undefined) {
-      // Insert after afterLine
       const before = lines.slice(0, edit.afterLine);
       const after = lines.slice(edit.afterLine);
       return [...before, edit.newCode, ...after].join('\n');
     }
 
-    // Default: append to end
     return content + '\n' + edit.newCode;
   };
 
@@ -223,6 +227,17 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
    * Apply delete action locally
    */
   const applyDelete = (content, edit) => {
+    // Try fuzzy match first if oldCode is provided
+    if (edit.oldCode) {
+      const match = locateEdit(content, edit.oldCode, edit.startLine);
+      if (match.matchType !== 'not_found') {
+        console.log(`[InstantEdit] Applied delete using ${match.matchType} match`);
+        const before = content.slice(0, match.startIndex);
+        const after = content.slice(match.endIndex);
+        return before + after;
+      }
+    }
+
     if (edit.startLine && edit.endLine) {
       const lines = content.split('\n');
       const before = lines.slice(0, edit.startLine - 1);
@@ -230,11 +245,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
       return [...before, ...after].join('\n');
     }
 
-    if (edit.oldCode) {
-      return content.replace(edit.oldCode, '');
-    }
-
-    throw new Error('Delete action requires either line numbers or old code');
+    throw new Error('Delete action requires valid oldCode matching or line numbers');
   };
 
   const handlePreviewEdit = (edit) => {

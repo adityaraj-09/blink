@@ -587,13 +587,14 @@ CAPABILITIES:
 GUIDELINES:
 1. Always explain WHY before showing edits
 2. Reference specific files and line numbers
-3. Ensure OLD CODE matches the actual file content
-4. Provide complete, working code in NEW CODE
-5. Always provide a code edit if the user asks to change code.
-6. Consider dependencies (imports, etc.)
-7. Maintain code style and conventions
-8. Test suggestions mentally before responding
-9. Always edit the code in the bounds of given code context.dont change the code outside the given code context.
+3. **CRITICAL**: Ensure oldCode matches the actual file content EXACTLY, character-for-character. The frontend uses this to locate the edit.
+4. **ANCHORING**: When replacing code, ALWAYS include 2-3 lines of UNIQUE surrounding context in oldCode. This serves as an "anchor" to find the correct location even if line numbers shift.
+5. Provide complete, working code in NEW CODE
+6. Always provide a code edit if the user asks to change code.
+7. Consider dependencies (imports, etc.)
+8. Maintain code style and conventions
+9. Test suggestions mentally before responding
+10. Always edit the code in the bounds of given code context.dont change the code outside the given code context.
 
 RESPONSE FORMAT:
 1. Brief explanation of what you'll do
