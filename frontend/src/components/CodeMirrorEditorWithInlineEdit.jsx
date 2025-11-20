@@ -21,6 +21,7 @@ import { python } from '@codemirror/lang-python';
 import { rust } from '@codemirror/lang-rust';
 import { cpp } from '@codemirror/lang-cpp';
 import { java } from '@codemirror/lang-java';
+import { Sparkles } from 'lucide-react';
 import InlineEditWidget from './InlineEditWidget';
 import { getInlineEdit } from '../api/aiEdit';
 import { locateEdit } from '../utils/fuzzyMatch';
@@ -177,6 +178,7 @@ const CodeMirrorEditorWithInlineEdit = ({
 }) => {
   const editorRef = useRef(null);
   const viewRef = useRef(null);
+  const promptButtonRef = useRef(null);
   
   // Use a ref to store active edit context to avoid stale closures in callbacks
   const activeEditContextRef = useRef({
@@ -199,6 +201,19 @@ const CodeMirrorEditorWithInlineEdit = ({
     error: null,
     suggestion: null,
   });
+
+  const [selectionState, setSelectionState] = useState({
+    hasSelection: false,
+    position: { top: 0, left: 0 },
+  });
+
+  // Ref to track inline edit state for selection listener
+  const inlineEditStateRef = useRef(inlineEditState);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    inlineEditStateRef.current = inlineEditState;
+  }, [inlineEditState]);
 
   /**
    * Show inline edit widget
@@ -593,6 +608,42 @@ const CodeMirrorEditorWithInlineEdit = ({
           const newValue = update.state.doc.toString();
           onChange(newValue);
         }
+        
+        // Track selection changes for prompt button
+        if (update.selectionSet || update.docChanged) {
+          const selection = update.state.selection.main;
+          const hasSelection = !selection.empty;
+          const isActive = inlineEditStateRef.current.active;
+          
+          if (hasSelection && !isActive) {
+            // Calculate button position from selection coordinates
+            try {
+              const coords = update.view.coordsAtPos(selection.to);
+              const editorRect = editorRef.current?.getBoundingClientRect();
+              
+              if (coords && editorRect) {
+                setSelectionState({
+                  hasSelection: true,
+                  position: {
+                    top: coords.top - editorRect.top - 40, // Position above selection
+                    left: coords.left - editorRect.left + 10,
+                  },
+                });
+              }
+            } catch (e) {
+              // Ignore coordinate calculation errors
+              setSelectionState({
+                hasSelection: false,
+                position: { top: 0, left: 0 },
+              });
+            }
+          } else {
+            setSelectionState({
+              hasSelection: false,
+              position: { top: 0, left: 0 },
+            });
+          }
+        }
       }),
 
       EditorView.theme({
@@ -689,7 +740,32 @@ const CodeMirrorEditorWithInlineEdit = ({
         border: '1px solid #1e293b',
         borderRadius: '8px',
       }}
-    />
+    >
+      {/* Floating Prompt Button */}
+      {selectionState.hasSelection && !inlineEditState.active && !readOnly && (
+        <button
+          ref={promptButtonRef}
+          onClick={(e) => {
+            e.stopPropagation();
+            showInlineEdit();
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault(); // Prevent losing selection
+            e.stopPropagation();
+          }}
+          className="absolute z-50 flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md shadow-lg transition-all duration-200 hover:shadow-xl"
+          style={{
+            top: `${Math.max(8, selectionState.position.top)}px`,
+            left: `${Math.max(8, selectionState.position.left)}px`,
+            pointerEvents: 'auto',
+          }}
+          title="AI Edit (Cmd/Ctrl+K)"
+        >
+          <Sparkles size={14} />
+          <span>AI Edit</span>
+        </button>
+      )}
+    </div>
   );
 };
 
