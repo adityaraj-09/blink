@@ -389,8 +389,10 @@ export class AITools {
     context: ToolContext
   ): Promise<ToolResult> {
     console.log('args', args);
-    const file = context.db.getDb().prepare(`
-      SELECT *
+    const dbConn = context.db.getDb();
+
+    const file = dbConn.prepare(`
+      SELECT file_id, file_path, file_hash, language, size_bytes, line_count, indexed_at
       FROM files
       WHERE project_id = ? AND file_path = ?
     `).get(context.projectId, args.filePath) as any;
@@ -401,7 +403,35 @@ export class AITools {
       throw new Error('File not found');
     }
 
-    const fileContent = file.content;
+    // Reconstruct file content from chunks (same logic as buildFileTreeFromFiles)
+    const chunks = dbConn.prepare(`
+      SELECT chunk_text, start_line, end_line
+      FROM chunks
+      WHERE file_id = ?
+      ORDER BY start_line ASC
+    `).all(file.file_id) as any[];
+
+    // Reconstruct file content from chunks
+    let fileContent = '';
+    if (chunks.length > 0) {
+      const lineMap = new Map<number, string>();
+
+      for (const chunk of chunks) {
+        const chunkLines = chunk.chunk_text.split('\n');
+        for (let i = 0; i < chunkLines.length; i++) {
+          const lineNumber = chunk.start_line + i;
+          if (!lineMap.has(lineNumber)) {
+            lineMap.set(lineNumber, chunkLines[i]);
+          }
+        }
+      }
+
+      const sortedLines = Array.from(lineMap.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([_, line]) => line);
+
+      fileContent = sortedLines.join('\n');
+    }
 
     const tokensUsed = this.estimateTokens(fileContent);
 
@@ -411,6 +441,7 @@ export class AITools {
       data: {
         filePath: args.filePath,
         content: fileContent,
+        language: file.language,
         lines: fileContent.split('\n').length,
         size: fileContent.length
       },

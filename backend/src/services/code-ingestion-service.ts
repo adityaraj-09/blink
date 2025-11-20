@@ -257,7 +257,7 @@ export class CodeIngestionService {
       }
     }
 
-    // Batch upsert to ChromaDB
+    // Batch upsert to ChromaDB (only if there are chunks to upsert)
     const chromaChunks = embeddingResults.map((result) => {
       const payload: ChunkPayload = {
         projectId: result.chunkData.projectId,
@@ -281,7 +281,9 @@ export class CodeIngestionService {
       };
     });
 
-    await this.chroma.upsertChunksBatch(projectId, chromaChunks);
+    if (chromaChunks.length > 0) {
+      await this.chroma.upsertChunksBatch(projectId, chromaChunks);
+    }
 
     // Store chunk metadata in database
     this.db.transaction(() => {

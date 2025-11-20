@@ -8,6 +8,8 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
+    <>
+  
     <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center py-4">
       <GlassSurface
         width="80%"
@@ -25,49 +27,73 @@ const Navbar = () => {
           <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <Code2 className="w-8 h-8 text-primary" />
-            <span className="text-xl font-bold">CodeHub</span>
+            <Code2 className="w-8 h-8 text-gray-400" />
+            <span className="text-xl font-bold">Ionix</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-gray-300 hover:text-primary transition-colors">
+            <Link to="/" className="text-gray-300 hover:text-white transition-colors">
               Home
             </Link>
-            <Link to="/#features" className="text-gray-300 hover:text-primary transition-colors">
+            <Link to="/#features" className="text-gray-300 hover:text-white transition-colors">
               Features
             </Link>
-            <Link to="/pricing" className="text-gray-300 hover:text-primary transition-colors">
+            <Link to="/pricing" className="text-gray-300 hover:text-white transition-colors">
               Pricing
             </Link>
-            <Link to="/editor" className="text-gray-300 hover:text-primary transition-colors">
+            <Link to="/editor" className="text-gray-300 hover:text-white transition-colors">
               Editor
             </Link>
-            <a href="#testimonials" className="text-gray-300 hover:text-primary transition-colors">
+            <a href="#testimonials" className="text-gray-300 hover:text-white transition-colors">
               Testimonials
             </a>
           </div>
 
-          {/* Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <SignedOut>
-              <Link to="/sign-in">
-                <button className="px-6 py-2 bg-linear-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white rounded-lg transition-all transform hover:scale-105">
-                  Sign In
-                </button>
-              </Link>
-            </SignedOut>
-            <SignedIn>
-              <Link to="/dashboard">
-                <button className="px-6 py-2 bg-white/5 hover:bg-white/10 border border-primary/20 text-white rounded-lg transition-all">
-                  Dashboard
-                </button>
-              </Link>
-              <UserButton afterSignOutUrl="/" />
-            </SignedIn>
-          </div>
+    
+                <div className="hidden md:flex items-center space-x-4">
+                <SignedOut>
+                  <Link to="/sign-in">
+                  <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] 
+                    rounded-[30px] transition-colors cursor-pointer
+                    before:content-[''] before:absolute before:-top-[1px] before:-left-[1px] before:-z-[1] before:w-[calc(100%+2px)] before:h-[calc(100%+2px)] before:rounded-[30px] before:p-[1px]
+                    bg-[#044fc7] hover:bg-[#0956d4] before:bg-gradient-to-b before:from-[#598ffa] before:to-[#044fc7]"
+                    style={{ backgroundImage: 'linear-gradient(rgba(108, 108, 108, 0.15), transparent)' }}>
+                    <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white [text-shadow:0px_0px_0.5px_#ffffff]">
+                    Sign In
+                    </span>
+                  </button>
+                  </Link>
+                </SignedOut>
+                <SignedIn>
+                  <Link to="/dashboard">
+                  <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] 
+                    rounded-[30px] transition-colors cursor-pointer
+                    before:content-[''] before:absolute before:-top-[1px] before:-left-[1px] before:-z-[1] before:w-[calc(100%+2px)] before:h-[calc(100%+2px)] before:rounded-[30px] before:p-[1px]
+                    bg-[#044fc7] hover:bg-[#0956d4] before:bg-gradient-to-b before:from-[#598ffa] before:to-[#044fc7]"
+                    style={{ backgroundImage: 'linear-gradient(rgba(108, 108, 108, 0.15), transparent)' }}>
+                    <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white [text-shadow:0px_0px_0.5px_#ffffff]">
+                    Dashboard
+                    </span>
+                  </button>
+                  </Link>
+                  <UserButton afterSignOutUrl="/"
+                    appearance={{
+                      elements: {
+                        footer: "hidden",
+                        userButton: "w-8 h-8 rounded-full",
+                        userButtonAvatarBox: "w-8 h-8 rounded-full",
+                        userButtonPopoverCard: "bg-[#0f1318] border border-white/10",
+                        userButtonPopoverHeader: "border-b border-white/10",
+                        userButtonPopoverFooter: "border-t border-white/10",
+                        userButtonSignOutButton: "w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-600/10 transition-colors",
+                      },
+                    }}
+                   />
+                </SignedIn>
+                </div>
 
-          {/* Mobile menu button */}
+                {/* Mobile menu button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden text-white"
@@ -78,72 +104,14 @@ const Navbar = () => {
         </div>
       </GlassSurface>
 
-      {/* Mobile menu */}
-      {isOpen && (
-        <GlassSurface
-          width="100%"
-          borderRadius={0}
-          brightness={10}
-          opacity={0.95}
-          blur={12}
-          backgroundOpacity={0.4}
-          saturation={1.2}
-          className="md:hidden border-b border-primary/20"
-        >
-          <div className="px-4 pt-2 pb-4 space-y-3 w-full">
-            <Link
-              to="/"
-              className="block py-2 text-gray-300 hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Home
-            </Link>
-            <Link
-              to="/#features"
-              className="block py-2 text-gray-300 hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              to="/pricing"
-              className="block py-2 text-gray-300 hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Pricing
-            </Link>
-            <Link
-              to="/editor"
-              className="block py-2 text-gray-300 hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Editor
-            </Link>
-            <a
-              href="#testimonials"
-              className="block py-2 text-gray-300 hover:text-primary transition-colors"
-              onClick={() => setIsOpen(false)}
-            >
-              Testimonials
-            </a>
-            <div className="pt-4 border-t border-primary/20">
-              <SignedOut>
-                <Link to="/sign-in" onClick={() => setIsOpen(false)}>
-                  <button className="w-full px-6 py-2 bg-linear-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white rounded-lg transition-all">
-                    Sign In
-                  </button>
-                </Link>
-              </SignedOut>
-              <SignedIn>
-                <div className="flex items-center justify-center">
-                  <UserButton afterSignOutUrl="/" />
-                </div>
-              </SignedIn>
-            </div>
-          </div>
-        </GlassSurface>
-      )}
+    
     </nav>
+
+
+
+
+
+    </>
   );
 };
 

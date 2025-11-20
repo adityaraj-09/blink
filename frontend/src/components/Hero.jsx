@@ -1,113 +1,189 @@
-import { SignInButton, SignedOut, SignedIn } from '@clerk/clerk-react';
-import { Github, ArrowRight, Zap, ShieldCheck, Cpu, Send } from 'lucide-react';
+import React from 'react';
+import { ArrowRight, Github, GitBranch, Terminal, Code, Cpu, Globe } from 'lucide-react';
 
-// New modern hero: layered radial gradients, floating callout, prompt box, trust bar
 const Hero = () => {
   return (
-    <section className="relative pt-44 pb-28 overflow-hidden">
-      {/* Background gradient field */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 opacity-70" style={{background: 'radial-gradient(circle at 50% 0%, rgba(19,42,255,0.35), transparent 65%)'}} />
-        <div className="absolute inset-0" style={{background: 'radial-gradient(80rem 40rem at 15% 60%, rgba(50,130,255,0.18), transparent 70%)'}} />
-        <div className="absolute inset-0" style={{background: 'radial-gradient(70rem 40rem at 90% 70%, rgba(20,59,254,0.20), transparent 75%)'}} />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-size-[4rem_4rem] opacity-30" />
+    <section className="relative bg-[#020617] pt-32 pb-20 sm:pt-40 sm:pb-24 overflow-hidden bg-bg-dark">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+        <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] opacity-50 mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute top-40 right-1/4 w-[400px] h-[400px] bg-indigo-600/20 rounded-full blur-[100px] opacity-50 mix-blend-screen animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Top badge strip */}
-        <div className="flex justify-center mb-10">
-          <a href="#updates" className="flex items-center gap-3 px-5 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-gray-300 backdrop-blur-xl ring-gradient">
-            <span className="flex items-center gap-1"><Github size={16} className="text-(--c2)"/> Updates</span>
-            <span className="text-(--c1)">We just shipped realtime sync →</span>
-          </a>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+        <div className="text-center max-w-4xl mx-auto mb-16">
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            v2.0 Now Available
+          </div>
+          
+          <h1 
+          className="text-white text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
+            Code smarter <br />
+          
+              Ship faster
 
-        {/* Headline */}
-        <div className="text-center">
-          <h1 className="font-bold tracking-tight text-5xl sm:text-6xl lg:text-7xl leading-[1.05]">
-            Build smarter. Grow faster.
           </h1>
-          <p className="mt-6 text-xl sm:text-2xl text-gray-400 max-w-3xl mx-auto">
-            CodeHub helps teams automate, align & scale with AI-assisted development, secure workflows and instant collaboration.
+          
+          <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed font-dm-sans">
+            The AI-powered code editor that understands your codebase. 
+            Write better code, debug faster, and automate repetitive tasks.
           </p>
-        </div>
-
-        {/* Prompt demo inline */}
-        <div className="mt-14 mx-auto max-w-3xl relative">
-          <div className="absolute -inset-4 rounded-[2.2rem] opacity-50 blur-xl pointer-events-none" style={{background: 'var(--g-b)'}} />
-          <div className="relative rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl p-6">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              <input aria-label="Hero prompt" placeholder="Ask CodeHub…" className="w-full px-5 py-4 rounded-xl bg-black/30 border border-white/10 outline-none text-white placeholder:text-white/40" />
-              <button className="px-6 py-4 rounded-xl font-semibold bg-(--c2)/20 hover:bg-(--c2)/30 transition text-white flex items-center gap-2">
-                <Send size={18} /> Send
-              </button>
-            </div>
-            <div className="mt-4 flex gap-3 flex-wrap">
-              {['Automate','Refactor','Docs'].map(t => (
-                <span key={t} className="px-3 py-1 rounded-lg text-sm bg-black/40 border border-white/10 text-gray-300">{t}</span>
-              ))}
-            </div>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="z-10 select-none">
+            <button type="button"
+          className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] 
+          rounded-[30px] transition-colors cursor-pointer
+          before:content-[''] before:absolute  before:-top-[1px] before:-left-[1px] before:-z-[1] before:w-[calc(100%+2px)] before:h-[calc(100%+2px)] before:rounded-[30px] before:p-[1px]
+          bg-[#044fc7] hover:bg-[#0956d4] before:bg-gradient-to-b before:from-[#598ffa] before:to-[#044fc7] w-full sm:w-auto"
+                                            style={{backgroundImage: 'linear-gradient(rgba(108, 108, 108, 0.15), transparent)'}}><span
+                                                className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white [text-shadow:0px_0px_0.5px_#ffffff]">Get
+                                                Started Free</span></button></div>
+          
+            <div className="z-10 select-none"><button type="button"
+                                            className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] 
+          rounded-[30px] transition-colors cursor-pointer
+          before:content-[''] before:absolute before:-top-[1px] before:-left-[1px] before:-z-[1] before:w-[calc(100%+2px)] before:h-[calc(100%+2px)] before:rounded-[30px] before:p-[1px]
+          bg-transparent hover:bg-white/5 border border-white/30 before:bg-transparent w-full sm:w-auto border-gray-400 sm:border-gray-500 text-gray-100 sm:text-gray-300 hover:bg-gray-800/50 sm:hover:bg-gray-700/30 hover:border-gray-300 sm:hover:border-gray-400"><span
+                                                className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">
+                                                <Github className="w-4 h-4" />
+              View on GitHub</span></button></div>
+            
           </div>
         </div>
 
-        {/* CTA + stats row */}
-        <div className="mt-12 flex flex-col items-center gap-8">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="px-8 py-4 rounded-xl font-semibold bg-(--c2)/25 hover:bg-(--c2)/35 transition text-white ring-gradient flex items-center gap-2">
-                  Get Started <ArrowRight size={18} className="text-(--c1)" />
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <a href="#pricing" className="px-8 py-4 rounded-xl font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition flex items-center gap-2 text-gray-200">
-              View Pricing
-            </a>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 text-center mt-4">
-            <div>
-              <div className="text-3xl font-bold text-(--c1)">50K+</div>
-              <div className="text-gray-400 text-sm">Developers</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-(--c1)">100K+</div>
-              <div className="text-gray-400 text-sm">Repos</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-(--c1)">99.9%</div>
-              <div className="text-gray-400 text-sm">Uptime</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-(--c1)">24/7</div>
-              <div className="text-gray-400 text-sm">Support</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-(--c1)">SOC2</div>
-              <div className="text-gray-400 text-sm">Security</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature highlight mini cards */}
-        <div className="mt-20 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {icon: <Zap size={24} className="text-(--c2)"/>, title:'Realtime Sync', desc:'Instant code & context updates.'},
-            {icon: <ShieldCheck size={24} className="text-(--c2)"/>, title:'Secure by Design', desc:'Encryption & role control.'},
-            {icon: <Cpu size={24} className="text-(--c2)"/>, title:'AI Assist', desc:'Smart edits & refactors.'},
-            {icon: <Github size={24} className="text-(--c2)"/>, title:'GitHub Native', desc:'Pull, commit, push seamlessly.'}
-          ].map((f,i)=>(
-            <div key={i} className="relative p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md overflow-hidden">
-              <div className="absolute -inset-0.5 rounded-2xl opacity-40 blur-md" style={{background: i%2? 'var(--g-a)': 'var(--g-c)'}} />
-              <div className="relative flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center ring-gradient">
-                  {f.icon}
-                </div>
-                <h3 className="font-semibold text-sm text-white">{f.title}</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
+        {/* Dashboard Mock */}
+        <div className="relative mx-auto max-w-5xl">
+          <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl blur opacity-20"></div>
+          <div className="relative bg-[#0B1120] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+            {/* Window Controls */}
+            <div className="h-10 bg-[#0F172A] border-b border-slate-800 flex items-center px-4 gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
+              <div className="ml-4 px-3 py-1 bg-slate-800/50 rounded text-xs text-slate-400 font-mono flex items-center gap-2">
+                <Terminal className="w-3 h-3" />
+                ~/projects/ionix
               </div>
             </div>
-          ))}
+
+            {/* Dashboard Content */}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#0B1120]/95 backdrop-blur-sm">
+              
+              {/* Language Usage (Pie Chart Mock) */}
+              <div className="col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                <h3 className="text-slate-200 text-sm font-medium mb-4 flex items-center gap-2">
+                  <Code className="w-4 h-4 text-blue-400" />
+                  Language Usage
+                </h3>
+                <div className="flex items-center justify-center h-40 relative">
+                  {/* Simple CSS Pie Chart */}
+                  <div className="w-32 h-32 rounded-full border-[16px] border-blue-500 border-r-indigo-500 border-b-purple-500 border-l-cyan-500 transform rotate-45"></div>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col">
+                    <span className="text-2xl font-bold text-white">TS</span>
+                    <span className="text-xs text-slate-400">TypeScript</span>
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <span className="text-slate-300">TypeScript</span>
+                    </div>
+                    <span className="text-slate-400">45%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                      <span className="text-slate-300">Rust</span>
+                    </div>
+                    <span className="text-slate-400">30%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Commit Activity (Calendar Mock) */}
+              <div className="col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                <h3 className="text-slate-200 text-sm font-medium mb-4 flex items-center gap-2">
+                  <GitBranch className="w-4 h-4 text-green-400" />
+                  Commit Activity
+                </h3>
+                <div className="grid grid-cols-7 gap-1">
+                  {[...Array(35)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-full pt-[100%] rounded-sm ${
+                        Math.random() > 0.7 ? 'bg-green-500/80' : 
+                        Math.random() > 0.4 ? 'bg-green-500/40' : 
+                        'bg-slate-800'
+                      }`}
+                    ></div>
+                  ))}
+                </div>
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
+                  <span>Less</span>
+                  <div className="flex gap-1">
+                    <div className="w-3 h-3 bg-slate-800 rounded-sm"></div>
+                    <div className="w-3 h-3 bg-green-500/40 rounded-sm"></div>
+                    <div className="w-3 h-3 bg-green-500/80 rounded-sm"></div>
+                  </div>
+                  <span>More</span>
+                </div>
+              </div>
+
+              {/* Recent PRs (Table Mock) */}
+              <div className="col-span-1 md:col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
+                <h3 className="text-slate-200 text-sm font-medium mb-4 flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-purple-400" />
+                  System Status
+                </h3>
+                <div className="space-y-4 flex-1">
+                  <div className="bg-slate-800/50 rounded-lg p-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">CPU Usage</span>
+                      <span className="text-purple-400">24%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-500 w-[24%]"></div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-lg p-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">Memory</span>
+                      <span className="text-blue-400">1.2GB</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 w-[45%]"></div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-lg p-3">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-slate-400">Network</span>
+                      <span className="text-green-400">Up</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                      <span className="text-xs text-slate-300">Connected to US-East</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* Works With Section */}
+        <div className="mt-20 pt-10 border-t border-white/5">
+          <p className="text-center text-gray-500 text-sm mb-8 font-medium uppercase tracking-wider">Trusted by developers at</p>
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+            {/* Simple text logos for now, or SVGs if available */}
+            <div className="flex items-center gap-2 text-xl font-bold text-white"><Github className="w-6 h-6" /> GitHub</div>
+            <div className="flex items-center gap-2 text-xl font-bold text-white"><GitBranch className="w-6 h-6" /> GitLab</div>
+            <div className="flex items-center gap-2 text-xl font-bold text-white"><Terminal className="w-6 h-6" /> Bitbucket</div>
+            <div className="flex items-center gap-2 text-xl font-bold text-white"><Globe className="w-6 h-6" /> Vercel</div>
+          </div>
         </div>
       </div>
     </section>

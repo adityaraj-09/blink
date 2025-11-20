@@ -13,7 +13,7 @@ import { getAIEdits, getChatSessions, getChatMessages } from '../api/aiEdit';
 import { syncWithMerkleTree } from '../api/files';
 import { MerkleHasher } from '../services/merkle';
 
-const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, onFilesChange }) => {
+const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, onFilesChange, onShowDiffInEditor }) => {
   const [mode, setMode] = useState('instant'); // 'instant' or 'progressive'
   const [message, setMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -629,6 +629,7 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
             error={instantError}
             projectId={projectId}
             fileContents={fileContents}
+            onShowDiffInEditor={onShowDiffInEditor}
             onFilesChange={(updatedContents, changedFilePath) => {
               // Call parent's onFilesChange to update file contents and mark as unsaved
               onFilesChange(updatedContents, changedFilePath);

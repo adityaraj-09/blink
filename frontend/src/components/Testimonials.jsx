@@ -1,213 +1,80 @@
-import { Code2 } from 'lucide-react';
+import React from 'react';
+import { Star } from 'lucide-react';
 
 const Testimonials = () => {
   const testimonials = [
     {
-      company: "TechVision",
-      companyLogo: "TV",
-      title: "Transforming Development Workflow",
-      description: "TechVision uses CodeHub to power their development teams, bringing the most relevant and important developer tools.",
-      quote: "As an early adopter, I was lightning fast, we were like holy sh**...",
-      stats: [
-        { value: "5x", label: "faster development" },
-        { value: "3x", label: "improved team productivity" }
-      ],
-      name: "Sarah Chen",
-      role: "CTO, TechVision",
-      image: "https://framerusercontent.com/images/DcHe9nmFJ4JHeI73qUIBZtRoNE.png?width=512&height=512"
+      quote: "This AI code editor transformed how we build software. The intelligent suggestions help us ship features 2x faster.",
+      author: "Sarah Chen",
+      role: "Founder at TechFlow",
+      avatar: "/images/avatars/1.webp"
     },
     {
-      company: "DevCorp",
-      companyLogo: "DC",
-      title: "Building Better Software",
-      description: "DevCorp leverages CodeHub's AI-powered features to streamline their development process and ship faster.",
-      quote: "The integration capabilities are mind-blowing. We shipped 3 major features in half the time.",
-      stats: [
-        { value: "10x", label: "cost and time saved" },
-        { value: "2x", label: "improved code quality" }
-      ],
-      name: "Marcus Rodriguez",
-      role: "Lead Engineer, DevCorp",
-      image: "https://framerusercontent.com/images/DcHe9nmFJ4JHeI73qUIBZtRoNE.png?width=512&height=512"
+      quote: "Finally, an editor that understands context. The codebase awareness is incredible and saves me hours of debugging.",
+      author: "Marcus Rodriguez",
+      role: "Senior Engineer at GrowthLab",
+      avatar: "/images/avatars/2.webp"
     },
     {
-      company: "InnovateLabs",
-      companyLogo: "IL",
-      title: "Accelerating Innovation",
-      description: "InnovateLabs uses CodeHub to enable their distributed teams to collaborate seamlessly across timezones.",
-      quote: "Game changer for our remote team. Everyone is in sync, and deployment is a breeze.",
-      stats: [
-        { value: "40%", label: "faster deployment" },
-        { value: "99.9%", label: "uptime reliability" }
-      ],
-      name: "Emily Watson",
-      role: "VP Engineering, InnovateLabs",
-      image: "https://framerusercontent.com/images/DcHe9nmFJ4JHeI73qUIBZtRoNE.png?width=512&height=512"
-    },
-    {
-      company: "CloudScale",
-      companyLogo: "CS",
-      title: "Scaling with Confidence",
-      description: "CloudScale relies on CodeHub's enterprise features to maintain security and compliance at scale.",
-      quote: "The security features and compliance tools give us complete peace of mind as we scale.",
-      stats: [
-        { value: "100%", label: "SOC 2 compliant" },
-        { value: "50%", label: "reduced onboarding time" }
-      ],
-      name: "David Kim",
-      role: "Security Lead, CloudScale",
-      image: "https://framerusercontent.com/images/DcHe9nmFJ4JHeI73qUIBZtRoNE.png?width=512&height=512"
+      quote: "The best investment we've made for our dev team. The collaboration features and AI integration are seamless.",
+      author: "Emily Watson",
+      role: "CTO at StartupXYZ",
+      avatar: "/images/avatars/3.webp"
     }
   ];
 
   return (
-    <section id="testimonials" className="py-24 relative overflow-hidden bg-gradient-to-b from-[#1e2329] via-[#16191e] to-[#1e2329]">
-      {/* Background effects */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
-      </div>
+    <section className="bg-[#020617] relative select-none overflow-hidden py-12 sm:py-16 md:py-20">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="mb-16 max-w-xl">
-          <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-            Our customers <span className="text-primary">love us</span>
+      <div className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[1250px] mx-auto px-4 sm:px-6 relative overflow-hidden z-20 border-[0.5px] border-slate-800/0 rounded-[12px]">
+        
+        {/* Background Effects */}
+        <div className="absolute w-[200px] sm:w-[280px] md:w-[380px] h-[200px] sm:h-[280px] md:h-[380px] translate-y-[70%] -z-1 -translate-x-1/2 rounded-full bottom-0 left-1/2 opacity-40 sm:opacity-60" style={{ background: 'radial-gradient(circle, rgba(10, 51, 117, 0.1) 0%, rgb(10, 51, 117) 50%, transparent 100%)', filter: 'blur(120px)' }}></div>
+        
+        <div className="text-center sm:mb-20 relative py-3 sm:py-10 pt-5 pb-8 bg-cover bg-center mb-9">
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            Testimonials
+          </div>
+          <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
+            Loved by developers
           </h2>
-          <p className="text-lg text-gray-400 mb-6">
-            We enable personalized experiences for your users.
+          <p className="text-text-body text-sm sm:text-base md:text-lg max-w-sm sm:max-w-lg md:max-w-2xl mx-auto leading-relaxed relative z-10 font-dm-sans">
+            See what our community is saying about their experience with our AI-powered platform
           </p>
-          <p className="text-gray-500 mb-8">
-            Builders everywhere are skipping months of infra work and shipping AI products with memory in days.
-          </p>
-          <button className="px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-medium transition-all">
-            Browse case studies & blogs
-          </button>
         </div>
 
-        {/* Auto-scrolling Testimonials */}
-        <div className="relative h-[500px]">
-          {/* Fade gradients */}
-          <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-[#16191e] to-transparent z-10 pointer-events-none"></div>
-          <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#16191e] to-transparent z-10 pointer-events-none"></div>
-
-          {/* Scrollable container */}
-          <div className="flex gap-6 overflow-hidden">
-            {/* First column - scrolls up */}
-            <div className="flex-1 flex flex-col gap-6 animate-scroll-up">
-              {testimonials.concat(testimonials).map((testimonial, index) => (
-                <TestimonialCard key={`col1-${index}`} testimonial={testimonial} />
-              ))}
-            </div>
-
-            {/* Second column - scrolls down */}
-            <div className="flex-1 flex flex-col gap-6 animate-scroll-down">
-              {[...testimonials].reverse().concat([...testimonials].reverse()).map((testimonial, index) => (
-                <TestimonialCard key={`col2-${index}`} testimonial={testimonial} />
-              ))}
-            </div>
-
-            {/* Third column - scrolls up (hidden on mobile) */}
-            <div className="hidden lg:flex flex-1 flex-col gap-6 animate-scroll-up-slow">
-              {testimonials.concat(testimonials).map((testimonial, index) => (
-                <TestimonialCard key={`col3-${index}`} testimonial={testimonial} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes scroll-up {
-          0% {
-            transform: translateY(0);
-          }
-          100% {
-            transform: translateY(-50%);
-          }
-        }
-
-        @keyframes scroll-down {
-          0% {
-            transform: translateY(-50%);
-          }
-          100% {
-            transform: translateY(0);
-          }
-        }
-
-        .animate-scroll-up {
-          animation: scroll-up 40s linear infinite;
-        }
-
-        .animate-scroll-down {
-          animation: scroll-down 40s linear infinite;
-        }
-
-        .animate-scroll-up-slow {
-          animation: scroll-up 50s linear infinite;
-        }
-      `}</style>
-    </section>
-  );
-};
-
-const TestimonialCard = ({ testimonial }) => {
-  return (
-    <div className="relative group rounded-2xl flex-shrink-0">
-      {/* Gradient shadow/glow */}
-      <div className="absolute -inset-1 bg-gradient-to-br from-primary/30 to-secondary/30 blur-xl opacity-50 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-      {/* Main card */}
-      <div className="relative bg-[#1a1f26]/90 backdrop-blur-sm rounded-2xl p-8 shadow-2xl">
-        {/* Company Logo */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-lg">{testimonial.companyLogo}</span>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">{testimonial.company}</h3>
-            </div>
-          </div>
-        </div>
-
-        {/* Title & Description */}
-        <div className="mb-6">
-          <h4 className="text-lg font-semibold text-white mb-2">{testimonial.title}</h4>
-          <p className="text-gray-400 text-sm leading-relaxed">{testimonial.description}</p>
-        </div>
-
-        {/* Stats */}
-        <div className="flex gap-4 mb-6">
-          {testimonial.stats.map((stat, idx) => (
-            <div key={idx} className="flex-1">
-              <div className="text-2xl font-bold text-primary">{stat.value}</div>
-              <div className="text-xs text-gray-500">{stat.label}</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+          {testimonials.map((testimonial, index) => (
+            <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-6 flex flex-col h-full hover:bg-white/10 transition-colors duration-300">
+              <div className="flex gap-1 mb-4">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                ))}
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed mb-6 flex-1">
+                "{testimonial.quote}"
+              </p>
+              <div className="flex items-center gap-3 mt-auto">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-800">
+                  {/* Placeholder for avatar if image fails */}
+                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">
+                    {testimonial.author.charAt(0)}
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-white font-medium text-sm truncate">{testimonial.author}</h4>
+                  <p className="text-gray-400 text-xs truncate">{testimonial.role}</p>
+                </div>
+              </div>
             </div>
           ))}
         </div>
-
-        {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-6"></div>
-
-        {/* Quote & Author */}
-        <div className="flex gap-4">
-          <img
-            src={testimonial.image}
-            alt={testimonial.name}
-            className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-          />
-          <div className="flex-1">
-            <p className="text-gray-300 text-sm italic mb-3">"{testimonial.quote}"</p>
-            <div>
-              <div className="font-semibold text-white text-sm">{testimonial.name}</div>
-              <div className="text-xs text-gray-500">{testimonial.role}</div>
-            </div>
-          </div>
-        </div>
       </div>
-    </div>
+    </section>
   );
 };
 

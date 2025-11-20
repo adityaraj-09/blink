@@ -1,138 +1,91 @@
+import React from 'react';
 import { SignUp } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
-import { Code2, CheckCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { dark } from '@clerk/themes';
 
 const SignUpPage = () => {
-  const benefits = [
-    "Unlimited private repositories",
-    "Advanced collaboration tools",
-    "AI-powered code suggestions",
-    "24/7 priority support",
-    "Enterprise-grade security",
-    "Free 14-day trial"
-  ];
-
   return (
-    <div className="min-h-screen bg-[#1e2329] flex">
-      {/* Left side - Branding & Benefits */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-        {/* Animated background gradients */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-secondary/30 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+    <div className="h-screen  flex items-center justify-center p-10 sm:p-8 font-dm-sans">
+      <div className="w-full m-4 max-w-[1200px]  bg-[#0f1318] rounded-[30px] overflow-hidden flex shadow-2xl border border-white/5 relative">
+        
+        {/* Background Gradients for the container */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-600/10 rounded-full blur-[100px]"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px]"></div>
         </div>
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <Code2 className="w-10 h-10 text-primary" />
-            <span className="text-2xl font-bold">CodeHub</span>
-          </Link>
-
-          {/* Main content */}
-          <div className="space-y-8">
-            <div>
-              <h1 className="text-5xl font-bold mb-4 leading-tight">
-                Start Building
-                <br />
-                <span className="bg-gradient-to-r from-secondary via-primary to-secondary bg-clip-text text-transparent">
-                  Something Amazing
-                </span>
-              </h1>
-              <p className="text-xl text-gray-400">
-                Get started with our platform and unlock powerful development tools
-              </p>
-            </div>
-
-            {/* Benefits list */}
-            <div className="space-y-4">
-              {benefits.map((benefit, index) => (
-                <div
-                  key={index}
-                  className="flex items-center space-x-3 group"
-                >
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="text-gray-300 group-hover:text-white transition-colors">{benefit}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Trust badges */}
-            <div className="pt-8 border-t border-primary/20">
-              <p className="text-sm text-gray-400 mb-4">Trusted by developers at</p>
-              <div className="flex flex-wrap gap-6 opacity-60">
-                <span className="text-lg font-semibold">Google</span>
-                <span className="text-lg font-semibold">Microsoft</span>
-                <span className="text-lg font-semibold">Amazon</span>
-              </div>
-            </div>
+        {/* Left Side - Image */}
+        <div className="hidden lg:flex w-1/2 relative flex-col justify-between p-12 bg-cover bg-center z-10" 
+             style={{ backgroundImage: 'url("/images/m2.jpg")' , objectFit: 'contain' }}>
+          <div className="absolute inset-0 bg-[#020617]/60 "></div>
+          <div className="absolute inset-0 bg-linear-to-t from-[#020617] via-transparent to-transparent"></div>
+          
+          <div className="relative z-10 w-full flex justify-end">
+             <Link to="/" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-white text-sm hover:bg-white/10 transition-all duration-300 group">
+               Back to website <ArrowLeft className="w-4 h-4 rotate-180 group-hover:translate-x-1 transition-transform" />
+             </Link>
           </div>
 
-          {/* Footer */}
-          <div className="text-sm text-gray-400">
-            © 2024 CodeHub. All rights reserved.
+          <div className="relative z-10">
+            <h2 className="text-4xl lg:text-5xl font-clash-display font-medium text-white mb-6 leading-tight">
+              Join the Community
+            </h2>
+            <p className="text-gray-300 text-lg max-w-md leading-relaxed">
+              Start building your next big idea with the most advanced AI coding platform.
+            </p>
+            
+            <div className="flex gap-3 mt-12">
+               <div className="w-2 h-1.5 bg-white/20 rounded-full"></div>
+               <div className="w-12 h-1.5 bg-blue-500 rounded-full"></div>
+               <div className="w-2 h-1.5 bg-white/20 rounded-full"></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Right side - Sign Up Form */}
-      <div className="flex-1 flex items-center justify-center p-8 relative">
-        {/* Mobile gradient background */}
-        <div className="absolute inset-0 lg:hidden">
-          <div className="absolute top-20 left-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
-        </div>
+        {/* Right Side - Form */}
+        <div className="w-full lg:w-1/2 bg-[#020617] p-8 sm:p-12 lg:p-16 flex flex-col justify-center relative z-10">
+           {/* Mobile Back Button */}
+           <div className="lg:hidden absolute top-6 right-6">
+             <Link to="/" className="text-gray-400 hover:text-white p-2">
+               <ArrowLeft className="w-6 h-6" />
+             </Link>
+           </div>
 
-        {/* Form container */}
-        <div className="relative z-10 w-full max-w-md">
-          {/* Mobile logo */}
-          <Link to="/" className="lg:hidden flex items-center justify-center space-x-2 mb-8">
-            <Code2 className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold">CodeHub</span>
-          </Link>
-
-          {/* Card wrapper with gradient border */}
-          <div className="relative">
-            {/* Gradient border effect */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-secondary via-primary to-secondary rounded-3xl blur opacity-30"></div>
-
-            {/* Main card */}
-            <div className="relative bg-[#1a1f26] rounded-3xl p-8 border border-primary/20">
-              <div className="mb-8 text-center">
-                <h2 className="text-3xl font-bold mb-2">Create Account</h2>
-                <p className="text-gray-400">Start your free trial today</p>
-              </div>
-
-              {/* Clerk SignUp component */}
-              <SignUp
-                routing="path"
-                path="/sign-up"
-                signInUrl="/sign-in"
-                redirectUrl="/"
-                afterSignUpUrl="/"
-              />
-
-              {/* Additional info */}
-              <div className="mt-6 pt-6 border-t border-primary/20">
-                <p className="text-center text-sm text-gray-400">
-                  Already have an account?{' '}
-                  <Link to="/sign-in" className="text-primary hover:text-secondary transition-colors font-semibold">
-                    Sign in
-                  </Link>
+           <div className="max-w-[400px] mx-auto w-full">
+             <div className="mb-10">
+                <h1 className="text-3xl sm:text-4xl font-clash-display font-medium text-white mb-3">
+                Create Account
+                </h1>
+                <p className="text-gray-400 text-base">
+                Already have an account? <Link to="/sign-in" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">Log in</Link>
                 </p>
-              </div>
+             </div>
 
-              {/* Back to home */}
-              <div className="mt-4 text-center">
-                <Link to="/" className="text-sm text-gray-400 hover:text-primary transition-colors">
-                  ← Back to home
-                </Link>
-              </div>
-            </div>
-          </div>
+             <SignUp 
+               appearance={{
+                 baseTheme: dark,
+                 elements: {
+                   rootBox: "w-full",
+                
+                   header: "hidden",
+                   footer: "hidden",
+                   
+                   formButtonPrimary: "bg-blue-600 hover:bg-blue-500 text-white normal-case text-[15px] py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-blue-600/20",
+                   formFieldInput: "bg-[#0f1318] border-white/10 text-white rounded-xl focus:border-blue-500 focus:ring-blue-500/20 py-3 px-4 transition-all duration-300",
+                   formFieldLabel: "text-gray-400 text-sm font-medium mb-1.5",
+                   socialButtonsBlockButton: "bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl py-3 transition-all duration-300",
+                   socialButtonsBlockButtonText: "font-medium",
+                   dividerLine: "bg-white/10",
+                   dividerText: "text-gray-500 text-sm",
+                   formFieldAction: "text-blue-400 hover:text-blue-300 text-sm font-medium",
+                   alert: "bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl",
+                   identityPreviewText: "text-gray-300",
+                   identityPreviewEditButton: "text-blue-400 hover:text-blue-300"
+                 }
+               }}
+             />
+           </div>
         </div>
       </div>
     </div>

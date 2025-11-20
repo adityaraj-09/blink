@@ -241,3 +241,118 @@ export async function getChatMessages(sessionId: string): Promise<{
   const client = getAPIClient();
   return client.get(`/api/ai/messages/${sessionId}`);
 }
+
+/**
+ * Inline Edit Request - for editing selected code directly in editor
+ */
+export interface InlineEditRequest {
+  projectId: string;
+  filePath: string;
+  selectedCode: string;
+  instruction: string;
+  startLine?: number;
+  endLine?: number;
+  language?: string;
+  fullFileContent?: string; // For better context
+}
+
+/**
+ * Inline Edit Response - simplified response for inline editing
+ */
+export interface InlineEditResponse {
+  originalCode: string;
+  editedCode: string;
+  explanation: string;
+  diff: {
+    additions: number;
+    deletions: number;
+    changes: DiffLine[];
+  };
+}
+
+/**
+ * Get AI-suggested inline edit (for selected code in editor)
+ * This uses the existing AI edit endpoint but returns a simplified response
+ */
+export async function getInlineEdit(request: InlineEditRequest): Promise<InlineEditResponse> {
+  const client = getAPIClient();
+
+  // Convert inline edit request to AI edit request format
+  const aiEditRequest: AIEditRequest = {
+    projectId: request.projectId,
+    message: `${request.instruction}\n\nSelected code to edit:\n\`\`\`${request.language || 'javascript'}\n${request.selectedCode}\n\`\`\``,
+    fileContext: {
+      filePath: request.filePath,
+      content: request.fullFileContent,
+      startLine: request.startLine,
+      endLine: request.endLine,
+    },
+  };
+
+  // Call AI edit endpoint
+  const response = await client.post<AIEditResponse>('/api/ai/edit', aiEditRequest);
+
+  // Extract the first edit (should be a replace operation)
+  const firstEdit = response.edits[0];
+
+  if (!firstEdit || !firstEdit.newCode) {
+    throw new Error('No code suggestion returned from AI');
+  }
+
+  // Calculate diff
+  const diffLines: DiffLine[] = calculateSimpleDiff(request.selectedCode, firstEdit.newCode);
+  const additions = diffLines.filter(d => d.type === 'add').length;
+  const deletions = diffLines.filter(d => d.type === 'remove').length;
+
+  return {
+    originalCode: request.selectedCode,
+    editedCode: firstEdit.newCode,
+    explanation: response.explanation,
+    diff: {
+      additions,
+      deletions,
+      changes: diffLines,
+    },
+  };
+}
+
+/**
+ * Simple diff calculator for inline edits
+ */
+function calculateSimpleDiff(oldCode: string, newCode: string): DiffLine[] {
+  const oldLines = oldCode.split('\n');
+  const newLines = newCode.split('\n');
+  const diffLines: DiffLine[] = [];
+
+  const maxLines = Math.max(oldLines.length, newLines.length);
+
+  for (let i = 0; i < maxLines; i++) {
+    const oldLine = oldLines[i];
+    const newLine = newLines[i];
+
+    if (oldLine === newLine) {
+      diffLines.push({
+        type: 'context',
+        lineNumber: i + 1,
+        content: oldLine || '',
+      });
+    } else {
+      if (oldLine !== undefined) {
+        diffLines.push({
+          type: 'remove',
+          lineNumber: i + 1,
+          content: oldLine,
+        });
+      }
+      if (newLine !== undefined) {
+        diffLines.push({
+          type: 'add',
+          lineNumber: i + 1,
+          content: newLine,
+        });
+      }
+    }
+  }
+
+  return diffLines;
+}

@@ -2,14 +2,17 @@
 
 
 @theme {
-  /* User-specified blue gradient palette */
-  --color-primary: #266eff;
-  --color-secondary: #7eaffe;
-  --color-accent: #132aff;
-  --color-dark-bg: #0b0f14; /* near-black background */
+  /* Gray-based theme matching landing.html */
+  --color-primary: #141414;
+  --color-secondary: #303030;
+  --color-accent: #525252;
+  --color-dark-bg: #141414; /* dark background */
+  --color-light-bg: #f7f7f7; /* light background */
 
   /* Font Family */
-  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-dm-sans: 'DM Sans', sans-serif;
+  --font-clash-display: 'Clash Display', sans-serif;
 
   /* Custom Animations */
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -36,9 +39,9 @@ body::before {
   inset: -10vmax;
   z-index: -2;
   background:
-    radial-gradient(60rem 40rem at 15% 10%, color-mix(in oklab, var(--color-primary) 35%, transparent), transparent 60%),
-    radial-gradient(70rem 45rem at 85% 70%, color-mix(in oklab, var(--color-secondary) 25%, transparent), transparent 60%),
-    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 40%);
+    radial-gradient(60rem 40rem at 15% 10%, rgba(255,255,255,0.02), transparent 60%),
+    radial-gradient(70rem 45rem at 85% 70%, rgba(255,255,255,0.015), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0) 40%);
   filter: blur(0px);
 }
 
@@ -47,11 +50,11 @@ body::after {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-image: linear-gradient(to right, rgba(76,111,255,0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(76,111,255,0.05) 1px, transparent 1px);
+  background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px);
   background-size: 4rem 4rem;
   mask-image: radial-gradient(60rem 60rem at 50% 20%, black, transparent 70%);
-  opacity: 0.6;
+  opacity: 0.3;
   pointer-events: none;
 }
 
@@ -101,17 +104,17 @@ body::after {
   pointer-events: none;
 }
 
-/* Gradient variables derived from palette (see src/theme/palette.js for JS access) */
+/* Gradient variables derived from gray palette */
 :root {
-  --c0: #132aff;
-  --c1: #7eaffe;
-  --c2: #266eff;
-  --c3: #6498fe;
-  --c4: #154afe;
-  --c5: #3282ff;
-  --c6: #1417ff;
-  --c7: #143bfe;
-  --c8: #175aff;
+  --c0: #141414;
+  --c1: #a3a3a3;
+  --c2: #525252;
+  --c3: #737373;
+  --c4: #262626;
+  --c5: #404040;
+  --c6: #1a1a1a;
+  --c7: #2a2a2a;
+  --c8: #363636;
 
   --g-a: linear-gradient(135deg, var(--c0), var(--c1));
   --g-b: linear-gradient(135deg, var(--c2), var(--c3));

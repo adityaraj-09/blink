@@ -5,7 +5,8 @@
 import React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Editor from '@monaco-editor/react';
+import CodeMirrorEditorWithInlineEdit from '../components/CodeMirrorEditorWithInlineEdit';
+import CodeMirrorDiffViewer from '../components/CodeMirrorDiffViewer';
 import {
   Bot,
   Github,
@@ -31,7 +32,9 @@ import {
   ArrowLeft,
   FileText,
   Zap,
-  ListTodo
+  ListTodo,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import AIChatPanel from '../components/AIChatPanel';
 import FileSearchModal from '../components/FileSearchModal';
@@ -87,6 +90,11 @@ const EditorPageFinal = () => {
   const [creatingItemType, setCreatingItemType] = useState('file'); // 'file' or 'folder'
   const [sidebarWidth, setSidebarWidth] = useState(256); // Default 256px (w-64)
   const [isResizing, setIsResizing] = useState(false);
+
+  // Diff mode state
+  const [diffMode, setDiffMode] = useState(false);
+  const [currentDiffEdit, setCurrentDiffEdit] = useState(null);
+  const [diffEditIndex, setDiffEditIndex] = useState(null);
 
   // Editor settings
   const [editorSettings, setEditorSettings] = useState({
@@ -913,6 +921,176 @@ const EditorPageFinal = () => {
     }
   };
 
+  /**
+   * Show diff for an edit in the main editor area
+   */
+  const handleShowDiffInEditor = (edit, editIndex) => {
+    console.log('[Editor] Showing diff in editor for:', edit.file, editIndex);
+
+    // Open the file if not already open
+    const file = files.find(f => f.filePath === edit.file);
+    if (file) {
+      const treeNode = {
+        id: file.fileId,
+        name: edit.file.split('/').pop(),
+        path: edit.file,
+        type: 'file',
+        fileData: file
+      };
+
+      // Add to open tabs if not already open
+      if (!openTabs.find(f => f.path === edit.file)) {
+        setOpenTabs([...openTabs, treeNode]);
+      }
+      setActiveTab(edit.file);
+    }
+
+    // Set diff mode
+    setCurrentDiffEdit(edit);
+    setDiffEditIndex(editIndex);
+    setDiffMode(true);
+  };
+
+  /**
+   * Apply edit from diff viewer
+   */
+  const handleAcceptDiff = () => {
+    if (!currentDiffEdit) return;
+
+    try {
+      // Get current file content
+      let currentContent = fileContents[currentDiffEdit.file] || '';
+
+      // Apply the edit based on action
+      let newContent = '';
+
+      if (currentDiffEdit.action === 'create') {
+        newContent = currentDiffEdit.newCode || '';
+
+        // Create file if it doesn't exist
+        if (!files.find(f => f.filePath === currentDiffEdit.file)) {
+          const detectedLanguage = getLanguageFromExtension(currentDiffEdit.file);
+          setLocalFiles(prev => new Set(prev).add(currentDiffEdit.file));
+
+          const newFile = {
+            fileId: `local-${Date.now()}`,
+            filePath: currentDiffEdit.file,
+            language: detectedLanguage,
+            sizeBytes: newContent.length,
+            lineCount: newContent.split('\n').length,
+            indexedAt: Date.now()
+          };
+          setFiles(prev => [...prev, newFile]);
+
+          const updatedFiles = [...files, newFile];
+          const tree = buildFileTree(updatedFiles);
+          setFileTree(tree);
+
+          setFileLanguages(prev => ({
+            ...prev,
+            [currentDiffEdit.file]: detectedLanguage
+          }));
+        }
+      } else if (currentDiffEdit.action === 'replace') {
+        newContent = applyReplace(currentContent, currentDiffEdit);
+      } else if (currentDiffEdit.action === 'insert') {
+        newContent = applyInsert(currentContent, currentDiffEdit);
+      } else if (currentDiffEdit.action === 'delete') {
+        newContent = applyDelete(currentContent, currentDiffEdit);
+      }
+
+      // Update file contents
+      setFileContents(prev => ({
+        ...prev,
+        [currentDiffEdit.file]: newContent
+      }));
+
+      setUnsavedChanges(prev => new Set(prev).add(currentDiffEdit.file));
+
+      // Exit diff mode
+      setDiffMode(false);
+      setCurrentDiffEdit(null);
+      setDiffEditIndex(null);
+
+      console.log('[Editor] Edit applied successfully');
+    } catch (err) {
+      console.error('[Editor] Failed to apply edit:', err);
+      alert(`Failed to apply edit: ${err.message}`);
+    }
+  };
+
+  /**
+   * Reject diff and exit diff mode
+   */
+  const handleRejectDiff = () => {
+    setDiffMode(false);
+    setCurrentDiffEdit(null);
+    setDiffEditIndex(null);
+  };
+
+  // Helper functions for applying edits
+  const applyReplace = (content, edit) => {
+    if (!edit.newCode) {
+      throw new Error('New code is required for replace action');
+    }
+
+    if (edit.startLine && edit.endLine) {
+      const lines = content.split('\n');
+      const before = lines.slice(0, edit.startLine - 1);
+      const after = lines.slice(edit.endLine);
+      return [...before, edit.newCode, ...after].join('\n');
+    }
+
+    if (edit.oldCode) {
+      if (content.includes(edit.oldCode)) {
+        return content.replace(edit.oldCode, edit.newCode);
+      }
+      throw new Error('Old code not found in file');
+    }
+
+    throw new Error('Replace action requires either line numbers or old code');
+  };
+
+  const applyInsert = (content, edit) => {
+    if (!edit.newCode) {
+      throw new Error('New code is required for insert action');
+    }
+
+    if (!content) {
+      return edit.newCode;
+    }
+
+    const lines = content.split('\n');
+
+    if (edit.startLine !== undefined) {
+      const insertIndex = edit.startLine - 1;
+      const before = lines.slice(0, insertIndex);
+      const after = lines.slice(insertIndex);
+      return [...before, edit.newCode, ...after].join('\n');
+    } else if (edit.afterLine !== undefined) {
+      const before = lines.slice(0, edit.afterLine);
+      const after = lines.slice(edit.afterLine);
+      return [...before, edit.newCode, ...after].join('\n');
+    }
+
+    return content + '\n' + edit.newCode;
+  };
+
+  const applyDelete = (content, edit) => {
+    if (edit.startLine && edit.endLine) {
+      const lines = content.split('\n');
+      const before = lines.slice(0, edit.startLine - 1);
+      const after = lines.slice(edit.endLine);
+      return [...before, ...after].join('\n');
+    }
+
+    if (edit.oldCode) {
+      return content.replace(edit.oldCode, '');
+    }
+
+    throw new Error('Delete action requires either line numbers or old code');
+  };
+
   // Render file tree recursively
   const renderFileTree = (nodes) => {
     return nodes.map(node => {
@@ -1225,30 +1403,79 @@ const EditorPageFinal = () => {
           )}
 
           {/* Editor */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
             {activeTab ? (
-              <Editor
-                height="100%"
-                language={fileLanguages[activeTab] || getLanguageFromExtension(activeTab) || 'plaintext'}
-                value={fileContents[activeTab] || ''}
-                onChange={handleEditorChange}
-                onMount={(editor) => {
-                  editorRef.current = editor;
-                  editor.addCommand(window.monaco.KeyMod.CtrlCmd | window.monaco.KeyCode.KeyS, () => {
-                    handleSaveFile();
-                  });
-                }}
-                theme={editorSettings.theme}
-                options={{
-                  fontSize: editorSettings.fontSize,
-                  tabSize: editorSettings.tabSize,
-                  wordWrap: editorSettings.wordWrap ? 'on' : 'off',
-                  minimap: { enabled: editorSettings.minimap },
-                  lineHeight: editorSettings.lineHeight * editorSettings.fontSize,
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                }}
-              />
+              <>
+                {diffMode && currentDiffEdit ? (
+                  // Show diff viewer
+                  <div className="h-full flex flex-col bg-[#1e1e1e]">
+                    {/* Diff Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d2d] bg-[#252525]">
+                      <div>
+                        <h3 className="font-semibold text-gray-200 mb-1">Review Edit</h3>
+                        <p className="text-xs text-gray-500">
+                          {currentDiffEdit.file} • {currentDiffEdit.action}
+                          {currentDiffEdit.startLine && ` • Lines ${currentDiffEdit.startLine}-${currentDiffEdit.endLine}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleRejectDiff}
+                          className="px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] rounded flex items-center gap-2 text-sm font-medium transition-colors text-gray-300"
+                        >
+                          <XCircle size={16} />
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAcceptDiff}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2 text-sm font-medium transition-colors"
+                        >
+                          <CheckCircle size={16} />
+                          Apply Changes
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Diff Viewer */}
+                    <div className="flex-1 overflow-hidden">
+                      <CodeMirrorDiffViewer
+                        edits={[currentDiffEdit]}
+                        onAcceptEdit={handleAcceptDiff}
+                        onRejectEdit={handleRejectDiff}
+                        onAcceptAll={handleAcceptDiff}
+                        onRejectAll={handleRejectDiff}
+                        fileContents={fileContents}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  // Normal editor view
+                  <>
+                    <CodeMirrorEditorWithInlineEdit
+                      value={fileContents[activeTab] || ''}
+                      language={fileLanguages[activeTab] || getLanguageFromExtension(activeTab) || 'plaintext'}
+                      onChange={handleEditorChange}
+                      onSave={handleSaveFile}
+                      settings={{
+                        fontSize: editorSettings.fontSize,
+                        tabSize: editorSettings.tabSize,
+                        wordWrap: editorSettings.wordWrap,
+                        minimap: editorSettings.minimap,
+                        lineHeight: editorSettings.lineHeight,
+                        theme: editorSettings.theme === 'vs-dark' ? 'oneDark' : editorSettings.theme,
+                      }}
+                      height="100%"
+                      projectId={projectId}
+                      filePath={activeTab}
+                    />
+                    {/* Inline Edit Hint */}
+                    <div className="absolute bottom-2 right-2 bg-[#1e1e1e]/90 border border-[#3d3d3d] rounded px-2 py-1 text-xs text-gray-400 flex items-center gap-1 pointer-events-none">
+                      <Zap size={12} className="text-purple-400" />
+                      <span>Press <kbd className="px-1 bg-[#2d2d2d] rounded border border-[#3d3d3d]">Cmd+K</kbd> for AI inline edit</span>
+                    </div>
+                  </>
+                )}
+              </>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
@@ -1267,6 +1494,7 @@ const EditorPageFinal = () => {
             files={files}
             fileContents={fileContents}
             onClose={() => setShowAIChat(false)}
+            onShowDiffInEditor={handleShowDiffInEditor}
             onFilesChange={(updatedContents, changedFilePath) => {
               // Update file contents in local state
               setFileContents(updatedContents);

@@ -1,118 +1,151 @@
-import { Code2, GitBranch, Users, Monitor, Link2, UsersRound } from 'lucide-react';
+import React from 'react';
+import { Bell, Users, TrendingUp, Activity, BarChart3, Zap, MessageSquare, Shield } from 'lucide-react';
 
 const Features = () => {
-  const mainFeatures = [
-    {
-      icon: <Code2 className="w-12 h-12" />,
-      title: "Smart Code Editor",
-      description: "Powerful in-browser code editor with syntax highlighting, auto-completion, and real-time collaboration. Work seamlessly with your team on any project.",
-      gradient: "from-primary via-secondary to-primary",
-      iconBg: "from-primary/20 to-secondary/20",
-      decorIcon: <Monitor className="w-16 h-16" />
-    },
-    {
-      icon: <GitBranch className="w-12 h-12" />,
-      title: "GitHub Integration",
-      description: "Seamlessly sync with your GitHub repositories. Pull, commit, and push directly from the platform with full version control support.",
-      gradient: "from-secondary via-primary to-secondary",
-      iconBg: "from-secondary/20 to-primary/20",
-      decorIcon: <Link2 className="w-16 h-16" />
-    },
-    {
-      icon: <Users className="w-12 h-12" />,
-      title: "Team Collaboration",
-      description: "Work together in real-time with your team. Share code, review pull requests, and track changes with powerful collaboration tools.",
-      gradient: "from-primary/80 via-secondary/80 to-primary/80",
-      iconBg: "from-primary/20 to-secondary/10",
-      decorIcon: <UsersRound className="w-16 h-16" />
-    }
-  ];
-
   return (
-  <section id="features" className="py-32 relative overflow-hidden bg-linear-to-b from-dark-bg via-[#0f1318] to-dark-bg">
-      {/* Enhanced background effects */}
-      <div className="absolute inset-0 z-0">
-  <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-linear-to-r from-primary/20 to-secondary/15 rounded-full blur-[120px] animate-pulse"></div>
-  <div className="absolute bottom-1/4 right-1/4 w-[700px] h-[700px] bg-linear-to-l from-secondary/20 to-primary/15 rounded-full blur-[130px] animate-pulse delay-1000"></div>
-      </div>
+    <section className="relative bg-[#020617] bg-bg-dark py-20 sm:py-24 overflow-hidden">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
 
-      {/* Grid pattern overlay */}
-  <div className="absolute inset-0 bg-[linear-gradient(to_right,#365eff05_1px,transparent_1px),linear-gradient(to_bottom,#365eff05_1px,transparent_1px)] bg-size-[4rem_4rem] pointer-events-none"></div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-20">
-          <div className="inline-flex items-center space-x-2 bg-primary/10 border border-primary/30 rounded-full px-4 py-2 mb-6 backdrop-blur-sm">
-            <Code2 className="w-4 h-4 text-primary" />
-            <span className="text-sm text-gray-300 font-medium">Powerful Features</span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+        
+        {/* Header */}
+        <div className="text-center mb-16 sm:mb-20">
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            Features
           </div>
-
-          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-            <span className="block mb-2">Everything you need for</span>
-            <span className="text-(--c1)">Modern Development</span>
+          <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
+            Key Features Overview
           </h2>
-
-          <p className="text-xl sm:text-2xl text-gray-400 max-w-3xl mx-auto">
-            Build, deploy, and scale your applications with confidence using our comprehensive suite of tools.
+          <p className="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed font-dm-sans">
+            Explore the comprehensive features that set Ionix apart in development excellence.
           </p>
         </div>
 
-        {/* Main Features - Enhanced Large Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          {mainFeatures.map((feature, index) => (
-            <div
-              key={index}
-              className="group relative overflow-hidden rounded-3xl transition-all duration-500 transform hover:-translate-y-3"
-            >
-              {/* Enhanced gradient glow */}
-              <div className={`absolute -inset-2 bg-linear-to-br ${feature.gradient} opacity-30 blur-2xl group-hover:opacity-60 transition-opacity duration-500`}></div>
-
-              {/* Main card with enhanced glassmorphism */}
-              <div className="relative bg-[#1a1f26]/80 backdrop-blur-xl border border-white/10 group-hover:border-primary/40 rounded-3xl transition-all duration-500 shadow-2xl h-full">
-    {/* Animated gradient overlay */}
-    <div className={`absolute inset-0 bg-linear-to-br ${feature.gradient} opacity-0 group-hover:opacity-15 rounded-3xl transition-opacity duration-500`}></div>
-
+        {/* Grid Layout */}
+        <div className="flex flex-col gap-6">
+          
+          {/* Row 1: Two Large Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Smart Notifications */}
+            <div className="group relative bg-[#0B1120] border border-slate-800 rounded-3xl p-8 overflow-hidden hover:border-blue-500/30 transition-all duration-500">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-blue-600/20 transition-all duration-500"></div>
+              
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 border border-blue-500/20 group-hover:scale-110 transition-transform duration-500">
+                  <Bell className="w-6 h-6 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Smart Notifications</h3>
+                <p className="text-gray-400 mb-8">Get real-time alerts for the updates that matter to you most. Filter noise and focus on code.</p>
                 
-                <div className="relative z-10 p-8 flex flex-col h-full">
-                  {/* Icon container with enhanced gradient and shadow */}
-                  <div className={`inline-flex p-5 rounded-2xl bg-linear-to-br ${feature.iconBg} mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg w-fit`}>
-                    <div className="text-primary group-hover:text-secondary transition-colors duration-300">
-                      {feature.icon}
+                {/* Mock UI */}
+                <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 backdrop-blur-sm transform group-hover:translate-y-[-5px] transition-transform duration-500">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><Zap className="w-4 h-4" /></div>
+                    <div>
+                      <div className="text-sm text-white font-medium">Build Succeeded</div>
+                      <div className="text-xs text-gray-500">Project: rust-merkle • 2m ago</div>
                     </div>
                   </div>
-
-                  {/* Large decorative icon with better positioning */}
-                  <div className="absolute top-6 right-6 text-primary/10 group-hover:text-secondary/20 group-hover:scale-110 transition-all duration-300">
-                    {feature.decorIcon}
-                  </div>
-
-                  <h3 className="text-2xl font-bold mb-4 group-hover:text-primary transition-colors text-white">
-                    {feature.title}
-                  </h3>
-
-                  <p className="text-gray-400 leading-relaxed mb-6 grow">
-                    {feature.description}
-                  </p>
-
-                  {/* Enhanced decorative gradient bar */}
-                  <div className="mt-auto">
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div className={`h-full bg-linear-to-r ${feature.gradient} rounded-full transition-all duration-700 group-hover:w-full w-2/3`}></div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400"><MessageSquare className="w-4 h-4" /></div>
+                    <div>
+                      <div className="text-sm text-white font-medium">New Comment on PR #42</div>
+                      <div className="text-xs text-gray-500">@sarah left a review • 5m ago</div>
                     </div>
                   </div>
                 </div>
-
-                {/* Enhanced shine effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent -skew-x-12 group-hover:translate-x-full transition-transform duration-1000 rounded-3xl"></div>
-                </div>
-
-                {/* Corner accent */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-linear-to-bl from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl"></div>
               </div>
             </div>
-          ))}
+
+            {/* Easy Collaborations */}
+            <div className="group relative bg-[#0B1120] border border-slate-800 rounded-3xl p-8 overflow-hidden hover:border-indigo-500/30 transition-all duration-500">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-600/20 transition-all duration-500"></div>
+              
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center mb-6 border border-indigo-500/20 group-hover:scale-110 transition-transform duration-500">
+                  <Users className="w-6 h-6 text-indigo-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Easy Collaborations</h3>
+                <p className="text-gray-400 mb-8">Streamlined solution for seamless and productive teamwork. Code together in real-time.</p>
+                
+                {/* Mock UI */}
+                <div className="flex -space-x-3 mb-4 justify-center">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-10 h-10 rounded-full border-2 border-[#0B1120] bg-slate-800 flex items-center justify-center text-xs text-white font-medium relative group-hover:scale-110 transition-transform duration-300" style={{ transitionDelay: `${i * 50}ms` }}>
+                      U{i}
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0B1120] rounded-full"></div>
+                    </div>
+                  ))}
+                  <div className="w-10 h-10 rounded-full border-2 border-[#0B1120] bg-slate-800 flex items-center justify-center text-xs text-gray-400 font-medium">+5</div>
+                </div>
+                <div className="text-center text-xs text-blue-400 font-mono bg-blue-500/10 py-2 rounded-lg border border-blue-500/20">
+                  <span className="animate-pulse">●</span> 4 users editing main.rs
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Three Smaller Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Fuel Your Growth */}
+            <div className="group relative bg-[#0B1120] border border-slate-800 rounded-3xl p-6 overflow-hidden hover:border-purple-500/30 transition-all duration-500">
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+              <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mb-4 border border-purple-500/20">
+                <TrendingUp className="w-5 h-5 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Fuel Your Growth</h3>
+              <p className="text-sm text-gray-400 mb-4">Empower your business with data-driven insights and analytics.</p>
+              <div className="h-24 bg-slate-900/50 rounded-lg border border-slate-800 relative overflow-hidden flex items-end px-2 pb-2 gap-1">
+                {[40, 60, 45, 70, 50, 80, 65, 90].map((h, i) => (
+                  <div key={i} className="flex-1 bg-purple-500/40 rounded-t-sm hover:bg-purple-500 transition-colors" style={{ height: `${h}%` }}></div>
+                ))}
+              </div>
+            </div>
+
+            {/* Performance Metrics */}
+            <div className="group relative bg-[#0B1120] border border-slate-800 rounded-3xl p-6 overflow-hidden hover:border-cyan-500/30 transition-all duration-500">
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+              <div className="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center mb-4 border border-cyan-500/20">
+                <Activity className="w-5 h-5 text-cyan-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Performance Metrics</h3>
+              <p className="text-sm text-gray-400 mb-4">Track your success with comprehensive analytics and insights.</p>
+              <div className="flex items-center justify-between bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+                <div className="text-xs text-gray-400">Latency</div>
+                <div className="text-sm font-mono text-green-400">12ms <span className="text-xs text-gray-500">(-2ms)</span></div>
+              </div>
+              <div className="flex items-center justify-between bg-slate-900/50 p-3 rounded-lg border border-slate-800 mt-2">
+                <div className="text-xs text-gray-400">Uptime</div>
+                <div className="text-sm font-mono text-green-400">99.99%</div>
+              </div>
+            </div>
+
+            {/* Analytics Dashboard */}
+            <div className="group relative bg-[#0B1120] border border-slate-800 rounded-3xl p-6 overflow-hidden hover:border-orange-500/30 transition-all duration-500">
+              <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+              <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center mb-4 border border-orange-500/20">
+                <BarChart3 className="w-5 h-5 text-orange-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Analytics Dashboard</h3>
+              <p className="text-sm text-gray-400 mb-4">Stay ahead with real-time data visualization and reporting.</p>
+              <div className="relative h-24 w-24 mx-auto">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800" />
+                  <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="251.2" strokeDashoffset="60" className="text-orange-500" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center flex-col">
+                  <span className="text-lg font-bold text-white">76%</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
+
       </div>
     </section>
   );

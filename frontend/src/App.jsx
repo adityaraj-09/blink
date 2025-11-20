@@ -62,7 +62,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/sign-in/*" element={<SignInPage />} />
-          <Route path="/sign-up/*" element={<SignUpPage />} />
+          {/* <Route path="/sign-up/*" element={<SignUpPage />} /> */}
 
           {/* Protected Routes - Require Authentication */}
           <Route path="/editor" element={<ProtectedRoute><EditorPageFinal /></ProtectedRoute>} />

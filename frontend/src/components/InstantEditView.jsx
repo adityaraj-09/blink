@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, XCircle, Eye, Code, Copy, Check, AlertTriangle, ChevronDown, ChevronUp, User, Bot } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import CodeMirrorDiffViewer from './CodeMirrorDiffViewer';
 
 /**
  * Detect language from file extension
@@ -46,9 +47,11 @@ const getLanguageFromFile = (filePath) => {
   return languageMap[ext] || 'javascript';
 };
 
-const InstantEditView = ({ response, conversationHistory, isLoading, error, projectId, fileContents, onFilesChange, onFileCreate }) => {
+const InstantEditView = ({ response, conversationHistory, isLoading, error, projectId, fileContents, onFilesChange, onFileCreate, onShowDiffInEditor }) => {
   const [selectedEdit, setSelectedEdit] = useState(null);
   const [showDiff, setShowDiff] = useState(false);
+  const [showDiffViewer, setShowDiffViewer] = useState(false); // Show professional diff viewer
+  const [currentMessageEdits, setCurrentMessageEdits] = useState([]); // Edits for diff viewer
   const [appliedEdits, setAppliedEdits] = useState(new Set());
   const [applyingEdit, setApplyingEdit] = useState(null);
   const [expandedEdits, setExpandedEdits] = useState(new Set()); // Track which code blocks are expanded
@@ -239,6 +242,47 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
     setShowDiff(true);
   };
 
+  /**
+   * Show all edits for a message in the professional diff viewer
+   */
+  const handleShowDiffViewer = (edits, messageIndex) => {
+    setCurrentMessageEdits(edits);
+    setShowDiffViewer(true);
+  };
+
+  /**
+   * Handle accepting an edit from the diff viewer
+   */
+  const handleAcceptEditFromViewer = (editIndex) => {
+    const edit = currentMessageEdits[editIndex];
+    handleApplyEdit(edit, editIndex);
+  };
+
+  /**
+   * Handle rejecting an edit from the diff viewer
+   */
+  const handleRejectEditFromViewer = (editIndex) => {
+    // Just close the diff viewer or mark as rejected
+    console.log('Rejected edit:', editIndex);
+  };
+
+  /**
+   * Handle accepting all edits from the diff viewer
+   */
+  const handleAcceptAllFromViewer = () => {
+    currentMessageEdits.forEach((edit, index) => {
+      handleApplyEdit(edit, index);
+    });
+    setShowDiffViewer(false);
+  };
+
+  /**
+   * Handle rejecting all edits from the diff viewer
+   */
+  const handleRejectAllFromViewer = () => {
+    setShowDiffViewer(false);
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Conversation History */}
@@ -247,6 +291,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
           {conversationHistory.map((msg, index) => (
             <ConversationMessage
               key={index}
+              messageIndex={index}
               userContent={msg.userContent}
               assistantContent={msg.assistantContent}
               edits={msg.edits}
@@ -256,6 +301,8 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
               applyingEdit={applyingEdit}
               onPreview={handlePreviewEdit}
               onApply={handleApplyEdit}
+              onShowDiffInEditor={onShowDiffInEditor}
+              onShowDiffViewer={() => handleShowDiffViewer(msg.edits, index)}
               expandedEdits={expandedEdits}
               setExpandedEdits={setExpandedEdits}
             />
@@ -264,7 +311,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
         </div>
       </div>
 
-      {/* Diff Modal */}
+      {/* Diff Modal (Legacy) */}
       {showDiff && selectedEdit && (
         <DiffModal
           edit={selectedEdit}
@@ -282,6 +329,41 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
           }}
         />
       )}
+
+      {/* Professional Diff Viewer */}
+      {showDiffViewer && currentMessageEdits.length > 0 && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#1e1e1e] border border-[#2d2d2d] rounded-lg w-full max-w-7xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#2d2d2d]">
+              <div>
+                <h3 className="font-semibold mb-1 text-gray-200">Professional Diff Viewer</h3>
+                <p className="text-xs text-gray-500">
+                  Review and apply changes with CodeMirror v6
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDiffViewer(false)}
+                className="p-2 hover:bg-[#2d2d2d] rounded transition-colors text-gray-400 hover:text-gray-200"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            {/* Diff Viewer */}
+            <div className="flex-1 overflow-hidden">
+              <CodeMirrorDiffViewer
+                edits={currentMessageEdits}
+                onAcceptEdit={handleAcceptEditFromViewer}
+                onRejectEdit={handleRejectEditFromViewer}
+                onAcceptAll={handleAcceptAllFromViewer}
+                onRejectAll={handleRejectAllFromViewer}
+                fileContents={fileContents}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -290,7 +372,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
  * Conversation Message Component
  * Combines user and assistant messages while keeping the same UI
  */
-const ConversationMessage = ({ userContent, assistantContent, edits, summary, contextChunks, appliedEdits, applyingEdit, onPreview, onApply, expandedEdits, setExpandedEdits, messageIndex = 0 }) => {
+const ConversationMessage = ({ userContent, assistantContent, edits, summary, contextChunks, appliedEdits, applyingEdit, onPreview, onApply, onShowDiffInEditor, expandedEdits, setExpandedEdits, messageIndex = 0, onShowDiffViewer }) => {
   const hasEdits = edits && edits.length > 0;
   const hasContext = contextChunks && contextChunks.length > 0;
 
@@ -343,9 +425,21 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
           <div className="bg-[#252525] border border-[#3d3d3d] rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-semibold text-gray-300">Suggested Changes</h4>
-              <span className="text-xs text-gray-500">
-                {edits.filter((e, i) => appliedEdits.has(`${e.file}-${i}`)).length}/{edits.length} applied
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  {edits.filter((e, i) => appliedEdits.has(`${e.file}-${i}`)).length}/{edits.length} applied
+                </span>
+                {onShowDiffViewer && (
+                  <button
+                    onClick={onShowDiffViewer}
+                    className="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                    title="Open in Professional Diff Viewer"
+                  >
+                    <Code size={12} />
+                    Review All
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
@@ -444,10 +538,18 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                             <Eye size={14} className="text-gray-400 hover:text-gray-200" />
                           </button>
                           <button
-                            onClick={() => onApply(edit, index)}
+                            onClick={() => {
+                              // If onShowDiffInEditor is provided, show diff in main editor
+                              // Otherwise, apply directly
+                              if (onShowDiffInEditor) {
+                                onShowDiffInEditor(edit, index);
+                              } else {
+                                onApply(edit, index);
+                              }
+                            }}
                             disabled={isApplying}
                             className="p-1.5 hover:bg-[#2d2d2d] disabled:bg-transparent disabled:cursor-not-allowed rounded transition-colors"
-                            title="Apply this edit"
+                            title={onShowDiffInEditor ? "Show diff in editor" : "Apply this edit"}
                           >
                             {isApplying ? (
                               <div className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />

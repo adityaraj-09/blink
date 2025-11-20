@@ -1,202 +1,205 @@
-import { SignInButton, SignedIn, SignedOut } from '@clerk/clerk-react';
-import { Check, Star, Zap, Crown } from 'lucide-react';
-
+import React from 'react';
+import { Check } from 'lucide-react';
 
 const Pricing = () => {
-  const pricingPlans = [
-    {
-      name: 'Free',
-      icon: <Star className="w-6 h-6" />,
-      price: '$0',
-      period: 'forever',
-      description: 'Perfect for getting started and hobby projects',
-      features: [
-        'Up to 3 repositories',
-        '500 MB storage',
-        'Basic code editor',
-        'GitHub integration',
-        'Community support',
-        'Basic templates',
-        '1 team member'
-      ],
-      highlighted: false,
-      cta: 'Get Started'
-    },
-    {
-      name: 'Pro',
-      icon: <Zap className="w-6 h-6" />,
-      price: '$19',
-      period: 'per month',
-      description: 'For professional developers and small teams',
-      features: [
-        'Unlimited repositories',
-        '50 GB storage',
-        'Advanced code editor',
-        'Priority GitHub sync',
-        'AI-powered assistance',
-        'Advanced templates',
-        'Up to 5 team members',
-        'CI/CD integration',
-        'Priority support',
-        'Custom domains',
-        'Advanced analytics'
-      ],
-      highlighted: true,
-      cta: 'Start Free Trial'
-    },
-    {
-      name: 'Enterprise',
-      icon: <Crown className="w-6 h-6" />,
-      price: 'Custom',
-      period: 'contact us',
-      description: 'For large teams and organizations',
-      features: [
-        'Everything in Pro',
-        'Unlimited storage',
-        'Dedicated infrastructure',
-        'SSO & SAML',
-        'Advanced security',
-        'Custom integrations',
-        'Unlimited team members',
-        'SLA guarantee',
-        '24/7 phone support',
-        'Custom training',
-        'Dedicated account manager',
-        'White-label options'
-      ],
-      highlighted: false,
-      cta: 'Contact Sales'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-[#1e2329]">
-    
+    <section className="relative bg-[#020617] bg-bg-dark pt-6 sm:pt-8 md:pt-10 py-6 sm:py-8 md:py-10 overflow-hidden">
+      {/* Background Gradients */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-16 relative overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl"></div>
+      <div className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[1250px] mx-auto p-4 sm:p-6 pt-8 sm:pt-12 md:pt-15 pb-6 sm:pb-8 md:pb-10 relative z-20 border-[0.5px] border-slate-800/0 rounded-[12px] overflow-hidden">
+        
+        {/* Background Effects */}
+        <div className="absolute inset-0 w-full h-full z-0 max-w-[1000px] mx-auto translate-x-1/2 top-1/3 rotate-z-90" style={{ opacity: 1 }}>
+          <div className="absolute inset-0 bg-bg-dark"></div>
+          <div className="absolute animate-fade-in" style={{ top: '-25%', width: '10%', left: '20%', height: '120%', transform: 'rotate(25deg) translateZ(0px)', transformOrigin: 'center top', zIndex: 1 }}>
+             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-20" style={{ width: '8px', height: '8px', background: 'radial-gradient(circle, rgb(59, 100, 246) 0%, rgba(59, 100, 246, 0.8) 30%, rgba(59, 100, 246, 0.4) 70%, transparent 100%)', borderRadius: '50%', filter: 'blur(0.5px)' }}></div>
+             <div className="absolute top-0 left-0 w-full" style={{ height: '100%', transformOrigin: 'center top' }}>
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 animate-smooth-fade-in" style={{ width: '4%', height: '100%', background: 'linear-gradient(rgba(59, 100, 246, 0.56) 0%, rgba(59, 100, 246, 0) 100%)', filter: 'blur(32px)', mixBlendMode: 'screen' }}></div>
+             </div>
+          </div>
+          <div className="absolute top-0 left-0 w-full h-full opacity-15 animate-pulse-slow" style={{ background: 'radial-gradient(at center top, rgba(111, 167, 255, 0.2) 0%, rgba(111, 167, 255, 0) 70%)', filter: 'blur(40px)' }}></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl sm:text-6xl font-bold mb-6">
-            Simple, <span className="text-primary">Transparent Pricing</span>
-          </h1>
-          <p className="text-xl text-gray-400 mb-8 max-w-3xl mx-auto">
-            Choose the perfect plan for your needs. All plans include a 14-day free trial.
+        <div className="text-center sm:mb-20 relative py-3 sm:py-10 pt-5 pb-8 bg-cover bg-center">
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            Pricing Plans
+          </div>
+          <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
+            Start free, scale smart
+          </h2>
+          <p className="text-text-body text-sm sm:text-base md:text-lg max-w-sm sm:max-w-lg md:max-w-2xl mx-auto leading-relaxed relative z-10 font-dm-sans">
+            Choose the perfect plan for your coding journey. Start free and upgrade as you grow. All plans include core AI features.
           </p>
+        </div>
 
-          {/* Billing Toggle */}
-          <div className="relative inline-block">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 to-secondary/30 blur-lg"></div>
-            <div className="relative flex items-center bg-[#1a1f26]/80 backdrop-blur-sm rounded-lg p-1 mb-12 shadow-xl">
-              <button className="px-6 py-2 bg-primary rounded-lg text-white font-semibold">
-                Monthly
-              </button>
-              <button className="px-6 py-2 text-gray-400 hover:text-white transition-colors">
-                Annual <span className="text-primary text-sm ml-1">(Save 20%)</span>
-              </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-6 mx-auto max-w-6xl relative z-10">
+          
+          {/* Starter Plan */}
+          <div className="min-h-[692px] relative p-[1px] rounded-[20px] h-auto w-full group transition-all duration-300 bg-gradient-to-b from-white/10 to-white/5">
+            <div className="w-full h-full rounded-[19px] relative flex flex-col p-8 bg-bg-dark/90 backdrop-blur-xl border border-white/10">
+              <h3 className="text-white text-xl font-bold mb-2 font-clash-display">Starter</h3>
+              <p className="text-gray-300 text-sm mb-6 font-dm-sans leading-relaxed">Perfect for individual developers getting started with AI-assisted coding.</p>
+              <div className="mb-6">
+                <div className="flex items-end mb-2">
+                  <span className="text-4xl font-bold text-white font-clash-display">$0</span>
+                  <span className="text-gray-400 text-sm mb-1 ml-1 font-dm-sans">/month</span>
+                </div>
+                <p className="text-gray-400 text-sm font-dm-sans">Free forever for individuals</p>
+              </div>
+              
+              <div className="flex-grow mb-8">
+                <h4 className="text-white text-sm font-medium mb-4 font-dm-sans uppercase tracking-wider">What's included:</h4>
+                <ul className="flex flex-col gap-3">
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-gray-300">Basic AI code completion</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-gray-300">Community support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-gray-300">5 Projects</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="z-10 select-none">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-[#044fc7] hover:bg-[#0956d4] w-full font-dm-sans border border-blue-500/30 text-blue-400 hover:bg-blue-600/10 hover:border-blue-400/50">
+                  <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Start Free</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Growth Plan */}
+          <div className="min-h-[692px] relative p-[1px] rounded-[20px] h-auto w-full group transition-all duration-300 bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700">
+            <div className="w-full h-full rounded-[19px] relative flex flex-col p-8 bg-bg-dark/90 backdrop-blur-xl border border-white/10">
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <div className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-full font-dm-sans shadow-lg">Most Popular</div>
+              </div>
+              <h3 className="text-white text-xl font-bold mb-2 font-clash-display">Pro</h3>
+              <p className="text-gray-300 text-sm mb-6 font-dm-sans leading-relaxed">Advanced AI models and features for professional developers.</p>
+              <div className="mb-6">
+                <div className="flex items-end mb-2">
+                  <span className="text-4xl font-bold text-white font-clash-display">$19</span>
+                  <span className="text-gray-400 text-sm mb-1 ml-1 font-dm-sans">/month</span>
+                </div>
+                <p className="text-gray-400 text-sm font-dm-sans">Billed monthly, cancel anytime</p>
+              </div>
+              
+              <div className="flex-grow mb-8">
+                <h4 className="text-white text-sm font-medium mb-4 font-dm-sans uppercase tracking-wider">What's included:</h4>
+                <ul className="flex flex-col gap-3">
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Advanced AI models (GPT-4, Claude 3)</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Unlimited Projects</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Priority Support</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Early access to new features</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="z-10 select-none">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-600/25 w-full font-dm-sans">
+                  <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Get Started</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Enterprise Plan */}
+          <div className="min-h-[692px] relative p-[1px] rounded-[20px] h-auto w-full group transition-all duration-300 bg-gradient-to-b from-white/10 to-white/5">
+            <div className="w-full h-full rounded-[19px] relative flex flex-col p-8 bg-bg-dark/90 backdrop-blur-xl border border-white/10">
+              <h3 className="text-white text-xl font-bold mb-2 font-clash-display">Team</h3>
+              <p className="text-gray-300 text-sm mb-6 font-dm-sans leading-relaxed">Complete solution for teams with collaboration features and admin controls.</p>
+              <div className="mb-6">
+                <div className="flex items-end mb-2">
+                  <span className="text-4xl font-bold text-white font-clash-display">$49</span>
+                  <span className="text-gray-400 text-sm mb-1 ml-1 font-dm-sans">/user/month</span>
+                </div>
+                <p className="text-gray-400 text-sm font-dm-sans">Billed monthly, cancel anytime</p>
+              </div>
+              
+              <div className="flex-grow mb-8">
+                <h4 className="text-white text-sm font-medium mb-4 font-dm-sans uppercase tracking-wider">What's included:</h4>
+                <ul className="flex flex-col gap-3">
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Everything in Pro</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Team collaboration tools</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">Admin dashboard</span>
+                  </li>
+                  <li className="flex items-start">
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-blue-400" />
+                    </div>
+                    <span className="text-sm font-dm-sans text-white font-medium">SSO & Security features</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="z-10 select-none">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-[#044fc7] hover:bg-[#0956d4] w-full font-dm-sans border border-blue-500/30 text-blue-400 hover:bg-blue-600/10 hover:border-blue-400/50">
+                  <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Contact Sales</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Pricing Cards */}
-      <section className="pb-24 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {pricingPlans.map((plan, index) => (
-              <div
-                key={index}
-                className={`relative rounded-2xl transition-all duration-300 hover:transform hover:-translate-y-2 group ${
-                  plan.highlighted ? 'scale-105' : ''
-                }`}
-              >
-                {/* Gradient shadow/glow */}
-                <div className={`absolute -inset-1 bg-gradient-to-br ${
-                  plan.highlighted ? 'from-primary/40 to-secondary/40 opacity-100' : 'from-primary/30 to-secondary/30 opacity-30'
-                } blur-xl group-hover:opacity-100 transition-opacity duration-300`}></div>
-
-                {/* Main card */}
-                <div className="relative bg-[#1a1f26]/80 backdrop-blur-sm rounded-2xl p-8 shadow-2xl">
-                {/* Popular Badge */}
-                {plan.highlighted && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-primary px-4 py-1 rounded-full text-sm font-semibold">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                {/* Plan Header */}
-                <div className="mb-6">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <div className="text-primary">{plan.icon}</div>
-                    <h3 className="text-2xl font-bold">{plan.name}</h3>
-                  </div>
-                  <p className="text-gray-400 text-sm">{plan.description}</p>
-                </div>
-
-                {/* Price */}
-                <div className="mb-6">
-                  <div className="flex items-baseline">
-                    <span className="text-5xl font-bold">{plan.price}</span>
-                    {plan.price !== 'Custom' && (
-                      <span className="text-gray-400 ml-2">/{plan.period}</span>
-                    )}
-                    {plan.price === 'Custom' && (
-                      <span className="text-gray-400 ml-2 text-xl">{plan.period}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* CTA Button */}
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button
-                      className={`w-full py-3 rounded-lg font-semibold transition-all mb-8 ${
-                        plan.highlighted
-                          ? 'bg-primary hover:bg-secondary text-white'
-                          : 'bg-white/10 hover:bg-white/20 text-white border border-primary/30'
-                      }`}
-                    >
-                      {plan.cta}
-                    </button>
-                  </SignInButton>
-                </SignedOut>
-                <SignedIn>
-                  <button
-                    className={`w-full py-3 rounded-lg font-semibold transition-all mb-8 ${
-                      plan.highlighted
-                        ? 'bg-primary hover:bg-secondary text-white'
-                        : 'bg-white/10 hover:bg-white/20 text-white border border-primary/30'
-                    }`}
-                  >
-                    {plan.cta}
-                  </button>
-                </SignedIn>
-
-                {/* Features List */}
-                <ul className="space-y-4">
-                  {plan.features.map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start space-x-3">
-                      <Check className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                      <span className="text-gray-300">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                </div>
-              </div>
-            ))}
+        <div className="mt-8 sm:mt-10 md:mt-13 px-4 sm:px-8 md:px-15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 relative z-10">
+          <div className="flex-1">
+            <h4 className="text-white text-lg sm:text-xl font-bold mb-2 sm:mb-3 font-clash-display">Need custom solutions?</h4>
+            <p className="text-gray-200 max-w-full sm:max-w-xl text-sm sm:text-base mb-4 sm:mb-6 font-dm-sans">
+              Get tailored AI solutions, custom integrations, and dedicated support for your enterprise.
+            </p>
+          </div>
+          <div className="z-10 select-none">
+            <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-transparent hover:bg-white/5 border border-white/30 w-full sm:w-auto flex-shrink-0">
+              <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Contact Sales</span>
+            </button>
           </div>
         </div>
-      </section>
-
-    
-
-    </div>
+      </div>
+    </section>
   );
 };
 
