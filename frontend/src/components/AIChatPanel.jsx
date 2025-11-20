@@ -471,41 +471,43 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
       {/* Resize Handle */}
       <div
         ref={resizeRef}
-        className="w-1 bg-[#2d2d2d] hover:bg-[#3d3d3d] cursor-ew-resize transition-colors"
+        className="w-1 bg-[#1e293b] hover:bg-blue-500 cursor-ew-resize transition-colors"
         onMouseDown={() => setIsResizing(true)}
       />
 
       {/* Main Panel */}
       <div
-        className="flex flex-col h-full bg-[#1e1e1e] border-l border-[#2d2d2d]"
+        className="flex flex-col h-full bg-[#0a0e1a] border-l border-[#1e293b]"
         style={{ width: `${panelWidth}px` }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-[#2d2d2d]">
-          <div className="flex items-center gap-2">
-            <MessageSquare size={18} className="text-gray-400" />
-            <h3 className="font-semibold text-sm text-gray-200">
+        <div className="flex items-center justify-between p-4 border-b border-[#1e293b] bg-[#0a0e1a]">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-purple-600/10 rounded-lg">
+              <MessageSquare size={18} className="text-purple-400" />
+            </div>
+            <h3 className="font-semibold text-base text-gray-100 font-['ClashDisplay-Variable']">
               AI Assistant
             </h3>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* New Session Button */}
             <button
               onClick={handleNewSession}
-              className="p-1.5 hover:bg-[#2d2d2d] rounded transition-colors"
+              className="p-2 hover:bg-[#1e293b] rounded-lg transition-all hover:scale-105"
               title="New Session"
             >
-              <Plus size={16} className="text-gray-400 hover:text-gray-200" />
+              <Plus size={16} className="text-blue-400" />
             </button>
 
             {/* Session History Button */}
             <button
               onClick={() => setShowSessionList(!showSessionList)}
-              className={`p-1.5 rounded transition-colors ${
+              className={`p-2 rounded-lg transition-all hover:scale-105 ${
                 showSessionList
-                  ? 'bg-[#2d2d2d] text-gray-200'
-                  : 'hover:bg-[#2d2d2d] text-gray-400'
+                  ? 'bg-[#1e293b] text-gray-200'
+                  : 'hover:bg-[#1e293b] text-gray-400'
               }`}
               title="Session History"
             >
@@ -516,12 +518,12 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
             <button
               onClick={handleManualSync}
               disabled={isSyncing}
-              className={`p-1.5 rounded transition-colors ${
+              className={`p-2 rounded-lg transition-all hover:scale-105 ${
                 syncSuccess
                   ? 'bg-green-900/30 text-green-400'
                   : isSyncing
-                  ? 'bg-[#2d2d2d] text-gray-400'
-                  : 'hover:bg-[#2d2d2d] text-gray-400 hover:text-gray-200'
+                  ? 'bg-[#1e293b] text-gray-400'
+                  : 'hover:bg-[#1e293b] text-gray-400 hover:text-gray-200'
               }`}
               title={isSyncing ? 'Syncing...' : syncSuccess ? 'Synced!' : 'Save & Sync'}
             >
@@ -534,9 +536,11 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
               )}
             </button>
 
+            <div className="h-6 w-px bg-[#1e293b]"></div>
+
             <button
               onClick={onClose}
-              className="p-1.5 ml-2 hover:bg-[#2d2d2d] rounded transition-colors"
+              className="p-2 hover:bg-[#1e293b] rounded-lg transition-all hover:scale-105"
               title="Close"
             >
               <X size={16} className="text-gray-400 hover:text-gray-200" />
@@ -546,24 +550,24 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
 
         {/* Session List */}
         {showSessionList && (
-          <div className="border-b border-[#2d2d2d] bg-[#1e1e1e] max-h-64 overflow-y-auto">
+          <div className="border-b border-[#1e293b] bg-[#020617] max-h-64 overflow-y-auto">
             {loadingSessions ? (
               <div className="p-4 text-center">
                 <Loader size={16} className="animate-spin mx-auto text-gray-500" />
               </div>
             ) : sessions.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-500">
+              <div className="p-4 text-center text-sm text-gray-500 font-['DM_Sans']">
                 No previous sessions
               </div>
             ) : (
-              <div className="divide-y divide-[#2d2d2d]">
+              <div className="divide-y divide-[#1e293b]">
                 {sessions.map((session) => (
                   <button
                     key={session.sessionId}
                     onClick={() => handleSelectSession(session)}
-                    className={`w-full text-left p-3 hover:bg-[#252525] transition-colors ${
+                    className={`w-full text-left p-3 hover:bg-[#1e293b] transition-all font-['DM_Sans'] ${
                       sessionId === session.sessionId
-                        ? 'bg-[#252525] border-l-2 border-gray-500'
+                        ? 'bg-[#1e293b] border-l-2 border-blue-500'
                         : ''
                     }`}
                   >
@@ -576,7 +580,7 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
                           {session.messageCount} messages • {new Date(session.updatedAt).toLocaleTimeString()}
                         </div>
                       </div>
-                      <MessageSquare size={14} className="text-gray-500 flex-shrink-0 mt-0.5" />
+                      <MessageSquare size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
                     </div>
                   </button>
                 ))}
@@ -587,8 +591,8 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
 
         {/* Sync Status */}
         {isSyncing && (
-          <div className="px-3 py-2 bg-[#252525] border-b border-[#2d2d2d]">
-            <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="px-4 py-2.5 bg-[#1e293b]/50 border-b border-[#1e293b]">
+            <div className="flex items-center gap-2 text-xs text-blue-400 font-['DM_Sans']">
               <RefreshCw size={14} className="animate-spin" />
               <span>Syncing changes with backend...</span>
             </div>
@@ -597,19 +601,19 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
 
         {/* Tagged Files Preview */}
         {taggedFiles.length > 0 && (
-          <div className="px-3 py-2 bg-[#252525] border-b border-[#2d2d2d]">
-            <div className="text-xs text-gray-400 mb-1">Tagged Files:</div>
-            <div className="flex flex-wrap gap-1">
+          <div className="px-4 py-2.5 bg-[#1e293b]/30 border-b border-[#1e293b]">
+            <div className="text-xs text-gray-400 mb-1.5 font-['DM_Sans'] font-medium">Tagged Files:</div>
+            <div className="flex flex-wrap gap-1.5">
               {taggedFiles.map((file) => (
                 <div
                   key={file.filePath}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-[#1e1e1e] border border-[#3d3d3d] rounded text-xs text-gray-300"
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-[#020617] border border-[#1e293b] rounded-md text-xs text-gray-300 font-['DM_Sans']"
                 >
-                  <FileText size={12} />
+                  <FileText size={12} className="text-blue-400" />
                   <span>{file.filePath}</span>
                   <button
                     onClick={() => setTaggedFiles(taggedFiles.filter(f => f.filePath !== file.filePath))}
-                    className="ml-1 hover:text-red-400 text-gray-500"
+                    className="ml-1 hover:text-red-400 text-gray-500 transition-colors"
                   >
                     <X size={10} />
                   </button>
@@ -669,19 +673,19 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
       </div>
 
         {/* Input Area */}
-        <div className="p-3 border-t border-[#2d2d2d] bg-[#1e1e1e] relative">
+        <div className="p-4 border-t border-[#1e293b] bg-[#0a0e1a] relative">
           {/* File Suggestions Dropdown */}
           {showFileSuggestions && (
-            <div className="absolute bottom-full left-3 right-3 mb-1 bg-[#252525] border border-[#3d3d3d] rounded shadow-lg max-h-40 overflow-y-auto z-50">
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#0a0e1a] border border-[#1e293b] rounded-lg shadow-2xl max-h-40 overflow-y-auto z-50">
               {fileSuggestions.map((file, index) => (
                 <button
                   key={file.filePath}
                   onClick={() => selectFile(file)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2d2d2d] flex items-center gap-2 text-gray-300 ${
-                    index === selectedFileIndex ? 'bg-[#2d2d2d]' : ''
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-[#1e293b] flex items-center gap-2 text-gray-300 font-['DM_Sans'] transition-all ${
+                    index === selectedFileIndex ? 'bg-[#1e293b]' : ''
                   }`}
                 >
-                  <FileText size={14} className="text-gray-500" />
+                  <FileText size={14} className="text-blue-400" />
                   <span>{file.filePath}</span>
                 </button>
               ))}
@@ -690,17 +694,17 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
 
           {/* Mode Dropdown */}
           {showModeDropdown && (
-            <div className="absolute bottom-full left-3 mb-1 bg-[#252525] border border-[#3d3d3d] rounded shadow-lg z-50 w-48">
+            <div className="absolute bottom-full left-4 mb-2 bg-[#0a0e1a] border border-[#1e293b] rounded-lg shadow-2xl z-50 w-52">
               <button
                 onClick={() => {
                   setMode('instant');
                   setShowModeDropdown(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2d2d2d] flex items-center gap-2 ${
-                  mode === 'instant' ? 'bg-[#2d2d2d] text-gray-200' : 'text-gray-400'
+                className={`w-full text-left px-3 py-2.5 text-sm hover:bg-[#1e293b] flex items-center gap-2 font-['DM_Sans'] transition-all ${
+                  mode === 'instant' ? 'bg-[#1e293b] text-gray-200' : 'text-gray-400'
                 }`}
               >
-                <Zap size={14} />
+                <Zap size={14} className="text-blue-400" />
                 <span>Instant Edit Mode</span>
               </button>
               <button
@@ -708,25 +712,25 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
                   setMode('progressive');
                   setShowModeDropdown(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-[#2d2d2d] flex items-center gap-2 ${
-                  mode === 'progressive' ? 'bg-[#2d2d2d] text-gray-200' : 'text-gray-400'
+                className={`w-full text-left px-3 py-2.5 text-sm hover:bg-[#1e293b] flex items-center gap-2 font-['DM_Sans'] transition-all ${
+                  mode === 'progressive' ? 'bg-[#1e293b] text-gray-200' : 'text-gray-400'
                 }`}
               >
-                <ListTodo size={14} />
+                <ListTodo size={14} className="text-purple-400" />
                 <span>Progressive Mode</span>
               </button>
             </div>
           )}
 
           {/* Input Box with Buttons Inside */}
-          <div className="relative flex items-end bg-[#252525] border border-[#3d3d3d] rounded focus-within:border-[#4d4d4d] transition-colors">
+          <div className="relative flex items-end bg-[#020617] border border-[#1e293b] rounded-lg focus-within:border-blue-500 transition-all shadow-lg">
             {/* Mode Selector Button - Inside Input */}
             <button
               onClick={() => setShowModeDropdown(!showModeDropdown)}
-              className="flex-shrink-0 p-2 hover:bg-[#2d2d2d] rounded-l flex items-center gap-1 transition-colors text-gray-400 hover:text-gray-200"
+              className="flex-shrink-0 p-2.5 hover:bg-[#1e293b] rounded-l-lg flex items-center gap-1 transition-all text-gray-400 hover:text-gray-200"
               title="Select Mode"
             >
-              {mode === 'instant' ? <Zap size={16} /> : <ListTodo size={16} />}
+              {mode === 'instant' ? <Zap size={16} className="text-blue-400" /> : <ListTodo size={16} className="text-purple-400" />}
               <ChevronDown size={12} />
             </button>
 
@@ -741,10 +745,10 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
                   ? 'Type @ to tag files...'
                   : 'Describe feature...'
               }
-              className="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none text-gray-200 placeholder-gray-500 min-h-[36px] max-h-[200px] overflow-y-auto"
+              className="flex-1 bg-transparent px-3 py-2.5 text-sm resize-none focus:outline-none text-gray-200 placeholder-gray-500 min-h-[40px] max-h-[200px] overflow-y-auto font-['DM_Sans']"
               style={{
                 height: 'auto',
-                minHeight: '36px',
+                minHeight: '40px',
                 maxHeight: '200px'
               }}
               disabled={isLoading}
@@ -758,7 +762,7 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
             <button
               onClick={handleSendMessage}
               disabled={!message.trim() || isLoading}
-              className="flex-shrink-0 p-2 hover:bg-[#2d2d2d] disabled:opacity-50 disabled:cursor-not-allowed rounded-r flex items-center justify-center transition-colors text-gray-400 hover:text-gray-200"
+              className="flex-shrink-0 p-2.5 hover:bg-[#1e293b] disabled:opacity-50 disabled:cursor-not-allowed rounded-r-lg flex items-center justify-center transition-all text-blue-400 hover:text-blue-300 hover:scale-105"
               title="Send"
             >
               {isLoading ? <Loader size={18} className="animate-spin" /> : <Send size={18} />}

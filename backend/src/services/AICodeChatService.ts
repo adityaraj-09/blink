@@ -105,19 +105,19 @@ export class AICodeChatService {
     }
 
     // Add file context if provided
-    // if (fileContext && fileContext.content) {
-    //   const lines = fileContext.content.split('\n');
-    //   let relevantCode = fileContext.content;
+    if (fileContext && fileContext.content) {
+      const lines = fileContext.content.split('\n');
+      let relevantCode = fileContext.content;
 
-    //   if (fileContext.startLine && fileContext.endLine) {
-    //     relevantCode = lines
-    //       .slice(fileContext.startLine - 1, fileContext.endLine)
-    //       .join('\n');
-    //     initialContext += `\n\nCurrent Selection (${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}):\n\`\`\`\n${relevantCode}\n\`\`\``;
-    //   } else {
-    //     initialContext += `\n\nCurrent File (${fileContext.filePath}):\n\`\`\`\n${fileContext.content}\n\`\`\``;
-    //   }
-    // }
+      if (fileContext.startLine && fileContext.endLine) {
+        relevantCode = lines
+          .slice(fileContext.startLine - 1, fileContext.endLine)
+          .join('\n');
+        initialContext += `\n\nCurrent Selection (${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}):\n\`\`\`\n${relevantCode}\n\`\`\``;
+      } else {
+        initialContext += `\n\nCurrent File (${fileContext.filePath}):\n\`\`\`\n${fileContext.content}\n\`\`\``;
+      }
+    }
 
     const initialPrompt = `You are an AI code editor assistant.
 
@@ -136,7 +136,80 @@ Guidelines:
 - Use get_chat_history to reference previous conversation context
 - Prefer specific tools (read_file) over broad ones (read_project) when possible
 
-If calling tools, do so now. If not, provide your answer directly.`;
+
+IMPORTANT:
+
+If calling tools, do so now. 
+If no tools are needed follow below guidelines:
+Add some explanation of the code changes/suggestions. and then add the code edit.
+
+Always Use <edit> XML tags for  any code changes/suggestions.Always provide a code edit if the user asks to change code.
+
+<edit file="relative/path/to/file.ts" start="15" end="20" action="replace">
+[EXACT OLD CODE from the file - must match exactly]
+---
+[NEW CODE with your improvements]
+</edit>
+
+EDIT TAG RULES:
+1. **action** can be: "create", "replace", "insert", or "delete"
+2. For **create**: Create new file, only NEW CODE needed (entire file content)
+3. For **replace**: Include start/end line numbers and OLD CODE --- NEW CODE
+4. For **insert**: Use "after" attribute (line number), only NEW CODE needed
+5. For **delete**: Include start/end line numbers and OLD CODE to remove
+
+EXAMPLES:
+
+**Create New File Example:**
+<edit file="src/types/user.ts" action="create">
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: Date;
+}
+
+export interface UserSession {
+  user: User;
+  token: string;
+  expiresAt: Date;
+}
+</edit>
+
+**Replace Example:**
+<edit file="src/auth.ts" start="15" end="20" action="replace">
+if (user.password == inputPassword) {
+  return true;
+}
+---
+if (await bcrypt.compare(inputPassword, user.password)) {
+  return true;
+}
+</edit>
+
+**Insert Example:**
+<edit file="src/auth.ts" after="5" action="insert">
+import bcrypt from 'bcrypt';
+</edit>
+
+**Delete Example:**
+<edit file="src/utils.ts" start="45" end="50" action="delete">
+function deprecatedHelper() {
+  // old code
+}
+</edit>
+
+CAPABILITIES:
+- Fix bugs and security issues
+- Refactor code for better quality
+- Add error handling and validation
+- Optimize performance
+- Add types, tests, and documentation
+- Convert between paradigms (callbacks → async/await, etc.)
+- Implement new features
+- Apply best practices
+
+`;
 
     console.log('[AI Chat] Phase 1: Tool selection...');
     const phase1Result = await model.generateContent(initialPrompt);
@@ -192,7 +265,7 @@ ${initialContext}
 Tool Results:
 ${toolResultsText}
 
-Now provide your answer or code edits based on the information above. Use <edit> XML tags for code changes.`;
+Now provide your answer or code edits based on the information above.Always Use <edit> XML tags for  any code changes/suggestions.Always provide a code edit if the user asks to change code.`;
 
       const finalModel = this.genAI.getGenerativeModel({
         model: this.model,
@@ -204,6 +277,7 @@ Now provide your answer or code edits based on the information above. Use <edit>
 
       const finalResult = await finalModel.generateContent(finalPrompt);
       const response = finalResult.response.text();
+      console.log('response', response);
 
       // Parse edits and build response
       return await this.buildResponse(
@@ -439,7 +513,7 @@ WHEN TO USE TEXT-ONLY:
 - Clarifying requirements before suggesting edits
 
 WHEN TO USE CODE EDITS:
-- User explicitly asks to "fix", "change", "refactor", "add", "remove" code
+- User explicitly asks to change code
 - Suggesting specific code improvements with concrete changes
 - Implementing new features or functionality
 - Correcting bugs or security issues
@@ -515,10 +589,11 @@ GUIDELINES:
 2. Reference specific files and line numbers
 3. Ensure OLD CODE matches the actual file content
 4. Provide complete, working code in NEW CODE
-5. Can suggest multiple edits in one response
+5. Always provide a code edit if the user asks to change code.
 6. Consider dependencies (imports, etc.)
 7. Maintain code style and conventions
 8. Test suggestions mentally before responding
+9. Always edit the code in the bounds of given code context.dont change the code outside the given code context.
 
 RESPONSE FORMAT:
 1. Brief explanation of what you'll do

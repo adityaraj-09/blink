@@ -61,14 +61,18 @@ class InlineEditWidgetView extends WidgetType {
   constructor(props) {
     super();
     this.props = props;
+    this.root = null;
   }
 
   eq(other) {
+    // Compare all props to determine if widget needs to be recreated
     return (
       other.props.selectedText === this.props.selectedText &&
       other.props.isLoading === this.props.isLoading &&
       other.props.error === this.props.error &&
-      other.props.suggestion === this.props.suggestion
+      other.props.suggestion === this.props.suggestion &&
+      other.props.onSubmit === this.props.onSubmit &&
+      other.props.onCancel === this.props.onCancel
     );
   }
 
@@ -77,8 +81,9 @@ class InlineEditWidgetView extends WidgetType {
     wrap.className = 'inline-edit-widget-container';
     wrap.style.cssText = 'margin: 8px 0; position: relative; z-index: 100;';
 
-    const root = createRoot(wrap);
-    root.render(
+    // Create root and store it for cleanup
+    this.root = createRoot(wrap);
+    this.root.render(
       <InlineEditWidget
         {...this.props}
         selectedText={this.props.selectedText}
@@ -89,10 +94,24 @@ class InlineEditWidgetView extends WidgetType {
         suggestion={this.props.suggestion}
         onAccept={this.props.onAccept}
         onReject={this.props.onReject}
+        language={this.props.language}
       />
     );
 
     return wrap;
+  }
+
+  destroy() {
+    // Clean up React root when widget is destroyed
+    if (this.root) {
+      // Use setTimeout to avoid issues with React 18 concurrent rendering
+      setTimeout(() => {
+        if (this.root) {
+          this.root.unmount();
+          this.root = null;
+        }
+      }, 0);
+    }
   }
 
   ignoreEvent() {
@@ -142,6 +161,7 @@ const CodeMirrorEditorWithInlineEdit = ({
   language = 'javascript',
   onChange,
   onSave,
+  onShowDiff,
   settings = {
     fontSize: 14,
     tabSize: 4,
@@ -156,6 +176,17 @@ const CodeMirrorEditorWithInlineEdit = ({
 }) => {
   const editorRef = useRef(null);
   const viewRef = useRef(null);
+  
+  // Use a ref to store active edit context to avoid stale closures in callbacks
+  const activeEditContextRef = useRef({
+    active: false,
+    selectedText: '',
+    startPos: 0,
+    endPos: 0,
+    startLine: 0,
+    endLine: 0,
+  });
+
   const [inlineEditState, setInlineEditState] = useState({
     active: false,
     selectedText: '',
@@ -176,20 +207,42 @@ const CodeMirrorEditorWithInlineEdit = ({
     if (!view) return;
 
     const selection = view.state.selection.main;
+    let selectedText, startPos, endPos, startLine, endLine, widgetPos;
+
     if (selection.empty) {
-      alert('Please select code to edit');
-      return;
+      // No selection - use entire file content
+      selectedText = view.state.doc.toString();
+      startPos = 0;
+      endPos = view.state.doc.length;
+      startLine = 1;
+      endLine = view.state.doc.lines;
+      // Position widget at cursor position
+      widgetPos = selection.from;
+    } else {
+      // Selection exists - use selected text
+      selectedText = view.state.doc.sliceString(selection.from, selection.to);
+      startPos = selection.from;
+      endPos = selection.to;
+      startLine = view.state.doc.lineAt(selection.from).number;
+      endLine = view.state.doc.lineAt(selection.to).number;
+      widgetPos = selection.to;
     }
 
-    const selectedText = view.state.doc.sliceString(selection.from, selection.to);
-    const startLine = view.state.doc.lineAt(selection.from).number;
-    const endLine = view.state.doc.lineAt(selection.to).number;
+    // Update ref immediately
+    activeEditContextRef.current = {
+      active: true,
+      selectedText,
+      startPos,
+      endPos,
+      startLine,
+      endLine,
+    };
 
     setInlineEditState({
       active: true,
       selectedText,
-      startPos: selection.from,
-      endPos: selection.to,
+      startPos,
+      endPos,
       startLine,
       endLine,
       isLoading: false,
@@ -200,7 +253,7 @@ const CodeMirrorEditorWithInlineEdit = ({
     // Dispatch effect to show widget
     view.dispatch({
       effects: showInlineEditEffect.of({
-        pos: selection.to,
+        pos: widgetPos,
         props: {
           selectedText,
           onSubmit: handleInlineEditSubmit,
@@ -210,10 +263,11 @@ const CodeMirrorEditorWithInlineEdit = ({
           suggestion: null,
           onAccept: null,
           onReject: null,
+          language,
         },
       }),
     });
-  }, []);
+  }, [language]);
 
   /**
    * Handle inline edit submission
@@ -223,14 +277,17 @@ const CodeMirrorEditorWithInlineEdit = ({
       const view = viewRef.current;
       if (!view || !projectId || !filePath) return;
 
+      // Use ref for current context
+      const context = activeEditContextRef.current;
+
       setInlineEditState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       // Update widget to show loading
       view.dispatch({
         effects: showInlineEditEffect.of({
-          pos: inlineEditState.endPos,
+          pos: context.endPos,
           props: {
-            selectedText: inlineEditState.selectedText,
+            selectedText: context.selectedText,
             onSubmit: handleInlineEditSubmit,
             onCancel: handleInlineEditCancel,
             isLoading: true,
@@ -238,6 +295,7 @@ const CodeMirrorEditorWithInlineEdit = ({
             suggestion: null,
             onAccept: null,
             onReject: null,
+            language,
           },
         }),
       });
@@ -247,10 +305,10 @@ const CodeMirrorEditorWithInlineEdit = ({
         const response = await getInlineEdit({
           projectId,
           filePath,
-          selectedCode: inlineEditState.selectedText,
+          selectedCode: context.selectedText,
           instruction,
-          startLine: inlineEditState.startLine,
-          endLine: inlineEditState.endLine,
+          startLine: context.startLine,
+          endLine: context.endLine,
           language,
           fullFileContent: view.state.doc.toString(),
         });
@@ -264,9 +322,9 @@ const CodeMirrorEditorWithInlineEdit = ({
         // Update widget with suggestion
         view.dispatch({
           effects: showInlineEditEffect.of({
-            pos: inlineEditState.endPos,
+            pos: context.endPos,
             props: {
-              selectedText: inlineEditState.selectedText,
+              selectedText: context.selectedText,
               onSubmit: handleInlineEditSubmit,
               onCancel: handleInlineEditCancel,
               isLoading: false,
@@ -274,6 +332,7 @@ const CodeMirrorEditorWithInlineEdit = ({
               suggestion: response,
               onAccept: () => handleAcceptEdit(response),
               onReject: handleInlineEditCancel,
+              language,
             },
           }),
         });
@@ -288,9 +347,9 @@ const CodeMirrorEditorWithInlineEdit = ({
         // Update widget with error
         view.dispatch({
           effects: showInlineEditEffect.of({
-            pos: inlineEditState.endPos,
+            pos: context.endPos,
             props: {
-              selectedText: inlineEditState.selectedText,
+              selectedText: context.selectedText,
               onSubmit: handleInlineEditSubmit,
               onCancel: handleInlineEditCancel,
               isLoading: false,
@@ -298,12 +357,13 @@ const CodeMirrorEditorWithInlineEdit = ({
               suggestion: null,
               onAccept: null,
               onReject: null,
+              language,
             },
           }),
         });
       }
     },
-    [inlineEditState, projectId, filePath, language]
+    [projectId, filePath, language]
   );
 
   /**
@@ -314,15 +374,76 @@ const CodeMirrorEditorWithInlineEdit = ({
       const view = viewRef.current;
       if (!view) return;
 
-      // Replace selected text with edited code
+      const context = activeEditContextRef.current;
+
+      // Check if there are edits to apply
+      if (suggestion.edits && suggestion.edits.length > 0) {
+        // If onShowDiff is provided, show in diff mode
+        if (onShowDiff) {
+          // Show the first edit in diff mode
+          // TODO: In the future, we could show all edits in a batch diff view
+          const edit = suggestion.edits[0];
+          onShowDiff(edit, 0);
+        } else {
+          // Fallback: Apply all edits directly
+          // Sort edits by line number (descending) to avoid position shifts
+          const sortedEdits = [...suggestion.edits].sort((a, b) => {
+            const aLine = a.startLine || 0;
+            const bLine = b.startLine || 0;
+            return bLine - aLine; // Process from bottom to top
+          });
+
+          // Apply each edit
+          let changes = [];
+          for (const edit of sortedEdits) {
+            if (edit.newCode) {
+              let fromPos, toPos;
+              
+              // Calculate position based on edit's startLine and endLine (if provided)
+              if (edit.startLine && edit.endLine) {
+                // Use the edit's specific line range
+                const startLineInfo = view.state.doc.line(edit.startLine);
+                const endLineInfo = view.state.doc.line(edit.endLine);
+                fromPos = startLineInfo.from;
+                toPos = endLineInfo.to;
+              } else {
+                // Fallback to the original selection range
+                fromPos = context.startPos;
+                toPos = context.endPos;
+              }
+
+              changes.push({
+                from: fromPos,
+                to: toPos,
+                insert: edit.newCode,
+              });
+            }
+          }
+
+          // Apply all changes in a single transaction
+          if (changes.length > 0) {
+            view.dispatch({
+              changes,
+              effects: hideInlineEditEffect.of(),
+            });
+          }
+        }
+      }
+
+      // Hide inline widget and reset state
       view.dispatch({
-        changes: {
-          from: inlineEditState.startPos,
-          to: inlineEditState.endPos,
-          insert: suggestion.editedCode,
-        },
         effects: hideInlineEditEffect.of(),
       });
+
+      // Reset state
+      activeEditContextRef.current = {
+        active: false,
+        selectedText: '',
+        startPos: 0,
+        endPos: 0,
+        startLine: 0,
+        endLine: 0,
+      };
 
       setInlineEditState({
         active: false,
@@ -336,7 +457,7 @@ const CodeMirrorEditorWithInlineEdit = ({
         suggestion: null,
       });
     },
-    [inlineEditState]
+    [onShowDiff]
   );
 
   /**
@@ -349,6 +470,15 @@ const CodeMirrorEditorWithInlineEdit = ({
     view.dispatch({
       effects: hideInlineEditEffect.of(),
     });
+
+    activeEditContextRef.current = {
+      active: false,
+      selectedText: '',
+      startPos: 0,
+      endPos: 0,
+      startLine: 0,
+      endLine: 0,
+    };
 
     setInlineEditState({
       active: false,
@@ -425,13 +555,44 @@ const CodeMirrorEditorWithInlineEdit = ({
         '&': {
           height: '100%',
           fontSize: `${settings.fontSize}px`,
+          backgroundColor: '#020617',
         },
         '.cm-scroller': {
           overflow: 'auto',
-          fontFamily: 'JetBrains Mono, Fira Code, Consolas, Monaco, "Courier New", monospace',
+          fontFamily: 'monospace',
+          backgroundColor: '#020617',
+        },
+        '.cm-gutters': {
+          backgroundColor: '#020617',
+          color:'#020617',
+          borderRadius: '0px',
+          fontFamily: '"Courier New", monospace',
+        },
+        '.cm-activeLineGutter': {
+          backgroundColor: '#1e293b',
+          color: '#e2e8f0',
+        },
+        '.cm-activeLine': {
+          backgroundColor: '#1e293b20',
+        },
+        '.cm-selectionBackground, ::selection': {
+          backgroundColor: '#3b82f640 !important',
+        },
+        '.cm-focused .cm-selectionBackground, .cm-focused ::selection': {
+          backgroundColor: '#3b82f660 !important',
+        },
+        '.cm-cursor': {
+          borderLeftColor: '#3b82f6',
+          borderLeftWidth: '2px',
+        },
+        '.cm-content': {
+          caretColor: '#3b82f6',
+          color: '#e2e8f0',
         },
         '.inline-edit-widget-container': {
           padding: '8px 0',
+          zIndex: '100',
+          margin: '8px 0',
         },
       }),
     ];
@@ -478,8 +639,11 @@ const CodeMirrorEditorWithInlineEdit = ({
         width: '100%',
         height: height,
         overflow: 'hidden',
-        backgroundColor: '#1e1e1e',
+        backgroundColor: '#020617',
         position: 'relative',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        border: '1px solid #1e293b',
+        borderRadius: '8px',
       }}
     />
   );

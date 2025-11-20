@@ -52,6 +52,47 @@ import { getFileIcon, getFolderIcon } from '../utils/fileIcons';
 import { MerkleHasher } from '../services/merkle';
 import { FileSystemSync } from '../services/webcontainer';
 
+// Folder icon variants with different colors (15 unique types)
+const FOLDER_ICONS = [
+  { name: 'folder-src', color: '#60A5FA' },        // blue-400
+  { name: 'folder-components', color: '#34D399' }, // emerald-400
+  { name: 'folder-api', color: '#F59E0B' },        // amber-500
+  { name: 'folder-config', color: '#8B5CF6' },     // violet-500
+  { name: 'folder-lib', color: '#EC4899' },        // pink-500
+  { name: 'folder-utils', color: '#14B8A6' },      // teal-500
+  { name: 'folder-public', color: '#F97316' },     // orange-500
+  { name: 'folder-dist', color: '#6366F1' },       // indigo-500
+  { name: 'folder-app', color: '#10B981' },        // emerald-500
+  { name: 'folder-views', color: '#EAB308' },      // yellow-500
+  { name: 'folder-admin', color: '#DC2626' },      // red-600
+  { name: 'folder-images', color: '#06B6D4' },     // cyan-500
+  { name: 'folder', color: '#A855F7' },            // purple-500 (default)
+  { name: 'folder-lib', color: '#F472B6' },        // pink-400
+  { name: 'folder-src', color: '#22D3EE' },        // cyan-400
+];
+
+// Hash function to consistently assign same icon to same folder
+const hashString = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
+};
+
+// Get consistent folder icon for a path
+const getFolderIconForPath = (folderPath, isExpanded) => {
+  const hash = hashString(folderPath || 'root');
+  const iconData = FOLDER_ICONS[hash % FOLDER_ICONS.length];
+  const iconName = isExpanded ? `${iconData.name}-open` : iconData.name;
+  return {
+    src: `/icons/${iconName}.svg`,
+    color: iconData.color
+  };
+};
+
 const EditorPageFinal = () => {
   const navigate = useNavigate();
   const editorRef = useRef(null);
@@ -136,20 +177,32 @@ const EditorPageFinal = () => {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Cmd+S or Ctrl+S - Save
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (activeTab) {
+          handleSaveFile();
+        }
+      }
       // Ctrl+P - File search
-      if (e.ctrlKey && e.key === 'p') {
+      else if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
         setShowFileSearch(prev => !prev);
+      }
+      // Ctrl+I - AI Chat panel
+      else if (e.ctrlKey && e.key === 'i') {
+        e.preventDefault();
+        setShowAIChat(prev => !prev);
+      }
+      // Ctrl+G - Git panel
+      else if (e.ctrlKey && e.key === 'g') {
+        e.preventDefault();
+        setShowGitPanel(prev => !prev);
       }
       // Ctrl+` - Terminal
       else if (e.ctrlKey && e.key === '`') {
         e.preventDefault();
         setShowTerminal(prev => !prev);
-      }
-      // Ctrl+Shift+G - Git panel
-      else if (e.ctrlKey && e.shiftKey && e.key === 'G') {
-        e.preventDefault();
-        setShowGitPanel(prev => !prev);
       }
       // F11 - Fullscreen
       else if (e.key === 'F11') {
@@ -160,7 +213,7 @@ const EditorPageFinal = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [activeTab]);
 
   // Sidebar resize handler
   useEffect(() => {
@@ -1038,7 +1091,9 @@ const EditorPageFinal = () => {
       const lines = content.split('\n');
       const before = lines.slice(0, edit.startLine - 1);
       const after = lines.slice(edit.endLine);
-      return [...before, edit.newCode, ...after].join('\n');
+      // Split newCode into lines if it contains multiple lines
+      const newLines = edit.newCode.split('\n');
+      return [...before, ...newLines, ...after].join('\n');
     }
 
     if (edit.oldCode) {
@@ -1061,16 +1116,17 @@ const EditorPageFinal = () => {
     }
 
     const lines = content.split('\n');
+    const newLines = edit.newCode.split('\n');
 
     if (edit.startLine !== undefined) {
       const insertIndex = edit.startLine - 1;
       const before = lines.slice(0, insertIndex);
       const after = lines.slice(insertIndex);
-      return [...before, edit.newCode, ...after].join('\n');
+      return [...before, ...newLines, ...after].join('\n');
     } else if (edit.afterLine !== undefined) {
       const before = lines.slice(0, edit.afterLine);
       const after = lines.slice(edit.afterLine);
-      return [...before, edit.newCode, ...after].join('\n');
+      return [...before, ...newLines, ...after].join('\n');
     }
 
     return content + '\n' + edit.newCode;
@@ -1098,11 +1154,11 @@ const EditorPageFinal = () => {
       const isActive = activeTab === node.path;
 
       if (node.type === 'folder') {
-        const FolderIconComponent = getFolderIcon(isExpanded);
+        const folderIcon = getFolderIconForPath(node.path, isExpanded);
         return (
           <div key={node.id}>
             <div
-              className="flex items-center gap-2 px-2 py-1 hover:bg-gray-800 cursor-pointer rounded text-sm"
+              className="flex items-center gap-2 px-2 py-1.5 hover:bg-[#1e293b] cursor-pointer rounded-md text-sm transition-all font-['DM_Sans']"
               onClick={() => toggleFolder(node.id)}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -1110,9 +1166,14 @@ const EditorPageFinal = () => {
                 setContextMenu({ folder: node, x: e.clientX, y: e.clientY });
               }}
             >
-              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <FolderIconComponent size={14} className="text-blue-400" />
-              <span>{node.name}</span>
+              {isExpanded ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
+              <img 
+                src={folderIcon.src} 
+                alt="folder" 
+                className="w-4 h-4"
+                style={{ filter: `drop-shadow(0 0 2px ${folderIcon.color})` }}
+              />
+              <span className="text-gray-300">{node.name}</span>
             </div>
             {isExpanded && (
               <div className="ml-4">
@@ -1120,7 +1181,12 @@ const EditorPageFinal = () => {
                 {creatingFileInFolder === node.path && (
                   <div className="flex items-center gap-2 px-2 py-1 mb-1">
                     {creatingItemType === 'folder' ? (
-                      <Folder size={14} className="text-blue-400" />
+                      <img 
+                        src="/icons/folder-src.svg" 
+                        alt="folder" 
+                        className="w-4 h-4"
+                        style={{ filter: 'drop-shadow(0 0 2px #60A5FA)' }}
+                      />
                     ) : (
                       <File size={14} className="text-gray-400" />
                     )}
@@ -1147,7 +1213,7 @@ const EditorPageFinal = () => {
                         }
                       }}
                       placeholder={creatingItemType === 'folder' ? 'folder-name' : 'filename.ext'}
-                      className="flex-1 bg-[#0e0e0e] border border-blue-500 rounded px-2 py-0.5 text-xs focus:outline-none"
+                      className="flex-1 bg-[#020617] border border-blue-500 rounded px-2 py-0.5 text-xs focus:outline-none text-gray-200"
                       autoFocus
                     />
                   </div>
@@ -1165,8 +1231,8 @@ const EditorPageFinal = () => {
       return (
         <div
           key={node.id}
-          className={`flex items-center justify-between gap-2 px-2 py-1 ml-6 hover:bg-gray-800 cursor-pointer rounded text-sm group ${
-            isActive ? 'bg-gray-800' : ''
+          className={`flex items-center justify-between gap-2 px-2 py-1.5 ml-6 hover:bg-[#1e293b] cursor-pointer rounded-md text-sm group transition-all font-['DM_Sans'] ${
+            isActive ? 'bg-[#1e293b] border-l-2 border-l-blue-500' : ''
           }`}
           onClick={() => handleFileClick(node)}
           onContextMenu={(e) => {
@@ -1181,13 +1247,13 @@ const EditorPageFinal = () => {
               </div>
             ) : (
               React.createElement(iconOrPath, {
-                size: 14,
+                size: 15,
                 className: 'text-gray-400'
               })
             )}
-            <span className="truncate">{node.name}</span>
+            <span className="truncate text-gray-300">{node.name}</span>
             {unsavedChanges.has(node.path) && (
-              <span className="text-yellow-400 text-xs">●</span>
+              <span className="text-yellow-400 text-xs font-bold">●</span>
             )}
           </div>
         </div>
@@ -1197,9 +1263,9 @@ const EditorPageFinal = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0e0e0e]">
+      <div className="flex items-center justify-center h-screen bg-[#020617]">
         <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
           <p className="text-gray-400">Loading editor...</p>
         </div>
       </div>
@@ -1208,14 +1274,14 @@ const EditorPageFinal = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0e0e0e]">
+      <div className="flex items-center justify-center h-screen bg-[#020617]">
         <div className="flex flex-col items-center space-y-4 text-center">
           <AlertCircle className="w-12 h-12 text-red-500" />
           <p className="text-gray-200 font-semibold">Failed to load editor</p>
           <p className="text-gray-400 text-sm">{error}</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
           >
             Back to Dashboard
           </button>
@@ -1225,122 +1291,92 @@ const EditorPageFinal = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0e0e0e]">
-    
-
-      {/* Top Bar */}
-      <div className="bg-[#181818] border-b border-[#2d2d2d] px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="text-lg font-semibold">{projectInfo?.projectName}</h1>
-          {projectInfo?.repositoryUrl && (
-            <div className="flex items-center gap-1 text-xs bg-[#238636]/10 border border-[#238636]/30 px-2 py-0.5 rounded">
-              <Github size={10} />
-              <span className="text-[#238636]">{projectInfo.repositoryUrl}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {activeTab && (
-            <button
-              onClick={() => handleSaveFile()}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
-                unsavedChanges.has(activeTab)
-                  ? 'bg-green-600 hover:bg-green-700'
-                  : 'bg-gray-700 hover:bg-gray-600'
-              }`}
-              title={unsavedChanges.has(activeTab) ? 'Save changes' : 'Sync with Merkle tree'}
-            >
-              <Save size={14} />
-              Save
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowGitPanel(!showGitPanel)}
-            className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
-              showGitPanel
-                ? 'bg-orange-600 hover:bg-orange-700'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-            title="Git Panel (Ctrl+Shift+G)"
-          >
-            <GitBranch size={14} />
-            Git
-          </button>
-
-          <button
-            onClick={() => setShowTerminal(!showTerminal)}
-            className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
-              showTerminal
-                ? 'bg-blue-600 hover:bg-blue-700'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-            title="Terminal (Ctrl+`)"
-          >
-            <TerminalIcon size={14} />
-            Terminal
-          </button>
-
-          <button
-            onClick={() => setShowAIChat(!showAIChat)}
-            className={`px-3 py-1.5 rounded flex items-center gap-2 text-xs font-medium transition-colors ${
-              showAIChat
-                ? 'bg-purple-600 hover:bg-purple-700'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-            title="AI Assistant"
-          >
-            <Bot size={14} />
-            AI Chat
-          </button>
-
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={`p-1.5 rounded transition-colors ${
-              showSettings
-                ? 'bg-gray-600 hover:bg-gray-500'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-            title="Settings"
-          >
-            <SettingsIcon size={14} />
-          </button>
-
-          <button
-            onClick={toggleFullscreen}
-            className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-            title="Fullscreen (F11)"
-          >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-          </button>
-        </div>
-      </div>
-
+    <div className="flex flex-col h-screen bg-[#020617]">
+      {/* Hide scrollbars globally */}
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - File Tree */}
         <div
-          className="bg-[#181818] border-r border-[#2d2d2d] flex flex-col relative"
+          className="bg-[#0a0e1a] border-r border-[#1e293b] flex flex-col relative"
           style={{ width: `${sidebarWidth}px` }}
         >
-          <div className="p-3 border-b border-[#2d2d2d] flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-300">Files</span>
-            <button
-              onClick={() => setShowNewFileModal(true)}
-              className="p-1 hover:bg-gray-700 rounded transition-colors"
-              title="New File"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
+            <div className="p-3 border-b border-[#1e293b]">
+              {/* Header with Project Name and Actions */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="text-gray-400 hover:text-gray-200 transition-all hover:scale-110"
+                    title="Back to Dashboard"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                  <span className="text-sm font-semibold text-gray-300 font-['ClashDisplay-Variable'] truncate">
+                    {projectInfo?.projectName || 'Project'}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowNewFileModal(true)}
+                  className="p-1.5 hover:bg-[#1e293b] rounded-lg transition-all hover:scale-110"
+                  title="New File"
+                >
+                  <Plus size={16} className="text-blue-400" />
+                </button>
+              </div>
+            
+              {/* Quick Actions */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowFileSearch(!showFileSearch)}
+                  className={`flex-1 p-2 rounded-lg transition-all hover:scale-105 flex items-center justify-center 
+                `}
+                  title="Search Files (Ctrl+P)"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+              
+                <button
+                  onClick={() => setShowGitPanel(!showGitPanel)}
+                  className={`flex-1 p-2 rounded-lg transition-all hover:scale-105 flex items-center justify-center `}
+                  title="Git (Ctrl+G)"
+                >
+                  <GitBranch size={16} />
+                </button>
+              
+                <button
+                  onClick={() => setShowTerminal(!showTerminal)}
+                  className={`flex-1 p-2 rounded-lg transition-all hover:scale-105 flex items-center justify-center `}
+                  title="Terminal (Ctrl+`)"
+                >
+                  <TerminalIcon size={16} />
+                </button>
+              
+                <button
+                  onClick={() => setShowAIChat(!showAIChat)}
+                  className={`flex-1 p-2 rounded-lg transition-all hover:scale-105 flex items-center justify-center `}
+                  title="AI Assistant (Ctrl+I)"
+                >
+                  <Bot size={16} />
+                </button>
+              
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`flex-1 p-2 rounded-lg transition-all hover:scale-105 flex items-center justify-center `}
+                  title="Settings"
+                >
+                  <SettingsIcon size={16} />
+                </button>
+              </div>
+            </div>
           <div className="flex-1 overflow-y-auto p-2">
             {fileTree.length > 0 ? renderFileTree(fileTree) : (
               <div className="text-center py-8 text-gray-500 text-sm">
@@ -1361,9 +1397,15 @@ const EditorPageFinal = () => {
 
         {/* Editor Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Tabs */}
+          {/* Tabs - Compact */}
           {openTabs.length > 0 && (
-            <div className="bg-[#181818] border-b border-[#2d2d2d] flex overflow-x-auto">
+            <div 
+              className="bg-[#0a0e1a] border-b border-[#1e293b] flex overflow-x-auto scrollbar-hide"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+            >
               {openTabs.map(file => {
                 const iconOrPath = getFileIcon(file.path);
                 const isImage = typeof iconOrPath === 'string';
@@ -1371,34 +1413,115 @@ const EditorPageFinal = () => {
                 return (
                   <div
                     key={file.path}
-                    className={`flex items-center gap-2 px-4 py-2 border-r border-[#2d2d2d] cursor-pointer hover:bg-gray-800 transition-colors ${
-                      activeTab === file.path ? 'bg-[#0e0e0e]' : ''
+                    className={`flex items-center gap-2 px-3 py-1.5 border-r border-[#1e293b] cursor-pointer hover:bg-[#1e293b] transition-all font-['DM_Sans'] group whitespace-nowrap ${
+                      activeTab === file.path ? 'bg-[#020617] border-b-2 border-b-blue-500' : ''
                     }`}
                     onClick={() => setActiveTab(file.path)}
+                    title={file.path}
                   >
                     {isImage ? (
-                      <div className="w-4 h-4 flex items-center justify-center bg-black rounded">
+                      <div className="w-3.5 h-3.5 shrink-0 flex items-center justify-center bg-black rounded">
                         <img src={iconOrPath} alt="" className="w-3 h-3" />
                       </div>
                     ) : (
                       React.createElement(iconOrPath, {
                         size: 14,
-                        className: 'text-gray-400'
+                        className: 'text-gray-400 shrink-0'
                       })
                     )}
-                    <span className="text-sm">{file.name}</span>
+                    <span className="text-xs text-gray-200">{file.name}</span>
                     {unsavedChanges.has(file.path) && (
-                      <span className="text-yellow-400 text-xs">●</span>
+                      <span className="text-yellow-400 text-[10px] font-bold shrink-0">●</span>
                     )}
                     <button
                       onClick={(e) => handleCloseTab(file.path, e)}
-                      className="p-0.5 hover:bg-gray-700 rounded transition-colors ml-2"
+                      className="p-0.5 hover:bg-[#334155] rounded transition-all ml-1 opacity-0 group-hover:opacity-100 shrink-0"
                     >
-                      <X size={12} />
+                      <X size={10} />
                     </button>
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Breadcrumb Navigation */}
+          {activeTab && (
+            <div 
+              className="bg-[#0a0e1a] border-b border-[#1e293b] px-4 py-2 flex items-center gap-1 overflow-x-auto text-xs font-['DM_Sans'] scrollbar-hide"
+              style={{
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+            >
+              {(() => {
+                const pathParts = activeTab.split('/');
+                const iconOrPath = getFileIcon(activeTab);
+                const isImage = typeof iconOrPath === 'string';
+                
+                return (
+                  <>
+                    {pathParts.map((part, index) => {
+                      const isLast = index === pathParts.length - 1;
+                      const pathUpToHere = pathParts.slice(0, index + 1).join('/');
+                      
+                      // Check if this path segment corresponds to a folder in our tree
+                      const isFolder = !isLast;
+                      
+                      return (
+                        <React.Fragment key={index}>
+                          {index > 0 && (
+                            <ChevronRight size={12} className="text-gray-600 shrink-0" />
+                          )}
+                          {isFolder ? (
+                            <button
+                              onClick={() => {
+                                // Find and expand this folder in the tree
+                                const folderId = `folder-${pathUpToHere}`;
+                                setExpandedFolders(prev => new Set(prev).add(folderId));
+                              }}
+                              className="text-gray-400 hover:text-gray-200 transition-colors hover:bg-[#1e293b] px-1.5 py-0.5 rounded flex items-center gap-1.5"
+                              title={`Open ${part} folder`}
+                            >
+                              {index === 0 ? (
+                                <img 
+                                  src={getFolderIconForPath(pathUpToHere, false).src}
+                                  alt="folder"
+                                  className="w-3.5 h-3.5"
+                                />
+                              ) : (
+                                <img 
+                                  src={getFolderIconForPath(pathUpToHere, false).src}
+                                  alt="folder"
+                                  className="w-3.5 h-3.5"
+                                />
+                              )}
+                              <span>{part}</span>
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-gray-200 font-medium px-1.5 py-0.5">
+                              {isImage ? (
+                                <div className="w-3.5 h-3.5 flex items-center justify-center bg-black rounded">
+                                  <img src={iconOrPath} alt="" className="w-3 h-3" />
+                                </div>
+                              ) : (
+                                React.createElement(iconOrPath, {
+                                  size: 14,
+                                  className: 'text-blue-400'
+                                })
+                              )}
+                              <span>{part}</span>
+                              {unsavedChanges.has(activeTab) && (
+                                <span className="text-yellow-400 text-[10px] ml-1">●</span>
+                              )}
+                            </div>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -1408,9 +1531,9 @@ const EditorPageFinal = () => {
               <>
                 {diffMode && currentDiffEdit ? (
                   // Show diff viewer
-                  <div className="h-full flex flex-col bg-[#1e1e1e]">
+                  <div className="h-full flex flex-col bg-[#020617]">
                     {/* Diff Header */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d2d] bg-[#252525]">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e293b] bg-[#0a0e1a]">
                       <div>
                         <h3 className="font-semibold text-gray-200 mb-1">Review Edit</h3>
                         <p className="text-xs text-gray-500">
@@ -1421,7 +1544,7 @@ const EditorPageFinal = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={handleRejectDiff}
-                          className="px-3 py-1.5 bg-[#2d2d2d] hover:bg-[#3d3d3d] rounded flex items-center gap-2 text-sm font-medium transition-colors text-gray-300"
+                          className="px-3 py-1.5 bg-[#1e293b] hover:bg-[#334155] rounded flex items-center gap-2 text-sm font-medium transition-colors text-gray-300"
                         >
                           <XCircle size={16} />
                           Cancel
@@ -1456,6 +1579,7 @@ const EditorPageFinal = () => {
                       language={fileLanguages[activeTab] || getLanguageFromExtension(activeTab) || 'plaintext'}
                       onChange={handleEditorChange}
                       onSave={handleSaveFile}
+                      onShowDiff={handleShowDiffInEditor}
                       settings={{
                         fontSize: editorSettings.fontSize,
                         tabSize: editorSettings.tabSize,
@@ -1469,9 +1593,9 @@ const EditorPageFinal = () => {
                       filePath={activeTab}
                     />
                     {/* Inline Edit Hint */}
-                    <div className="absolute bottom-2 right-2 bg-[#1e1e1e]/90 border border-[#3d3d3d] rounded px-2 py-1 text-xs text-gray-400 flex items-center gap-1 pointer-events-none">
-                      <Zap size={12} className="text-purple-400" />
-                      <span>Press <kbd className="px-1 bg-[#2d2d2d] rounded border border-[#3d3d3d]">Cmd+K</kbd> for AI inline edit</span>
+                    <div className="absolute bottom-3 right-3 bg-[#0a0e1a]/95 border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-gray-400 flex items-center gap-2 pointer-events-none shadow-xl backdrop-blur-sm font-['DM_Sans']">
+                      <Zap size={14} className="text-blue-400" />
+                      <span>Press <kbd className="px-2 py-1 bg-[#1e293b] rounded-md border border-[#334155] text-blue-400 font-medium">Cmd+K</kbd> for AI inline edit</span>
                     </div>
                   </>
                 )}
@@ -1558,7 +1682,7 @@ const EditorPageFinal = () => {
 
         {/* Git Panel */}
         {showGitPanel && (
-          <div className="w-96 flex-shrink-0">
+          <div className="w-96 shrink-0">
             <GitPanel
               projectId={projectId}
               onClose={() => setShowGitPanel(false)}
@@ -1568,7 +1692,7 @@ const EditorPageFinal = () => {
 
         {/* Settings Panel */}
         {showSettings && (
-          <div className="w-96 flex-shrink-0">
+          <div className="w-96 shrink-0">
             <SettingsPanel
               onClose={() => setShowSettings(false)}
               settings={editorSettings}
@@ -1580,7 +1704,7 @@ const EditorPageFinal = () => {
 
         {/* Terminal Panel */}
         {showTerminal && (
-          <div className="h-64 flex-shrink-0 relative">
+          <div className="h-64 shrink-0 relative">
             <WebContainerTerminal
               projectId={projectId}
               files={wcFiles}
@@ -1615,10 +1739,16 @@ const EditorPageFinal = () => {
       </div>
 
       {/* Status Bar */}
-      <div className="bg-[#181818] border-t border-[#2d2d2d] px-4 py-1.5 flex items-center justify-between text-xs">
+      {/* <div className="bg-[#0a0e1a] border-t border-[#1e293b] px-4 py-1.5 flex items-center justify-between text-xs font-['DM_Sans']">
         <div className="flex items-center gap-4">
-          <span className="text-gray-400">
-            Files: <span className="text-gray-200">{files.length}</span>
+          <span className="text-gray-500">
+            {projectInfo?.projectName && (
+              <>
+                <span className="text-blue-400 font-medium">{projectInfo.projectName}</span>
+                <span className="mx-2">•</span>
+              </>
+            )}
+            <span className="text-gray-200 font-medium">{files.length}</span> files
           </span>
           {isIngesting && (
             <span className="text-blue-400 flex items-center gap-1">
@@ -1631,7 +1761,7 @@ const EditorPageFinal = () => {
               ✓ Indexed {ingestionResult.result.filesProcessed} files
             </span>
           )}
-          {/* WebContainer Status */}
+
           {wcBooting && (
             <span className="text-yellow-400 flex items-center gap-1">
               <span className="w-2 h-2 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
@@ -1659,27 +1789,28 @@ const EditorPageFinal = () => {
 
         <div className="flex items-center gap-4">
           {activeTab && (
-            <span className="text-gray-400">{activeTab}</span>
+            <span className="text-gray-400 truncate max-w-md">{activeTab}</span>
           )}
           {unsavedChanges.size > 0 && (
-            <span className="text-yellow-400">
-              {unsavedChanges.size} unsaved
+            <span className="text-yellow-400 flex items-center gap-1">
+              <span className="inline-block w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+              {unsavedChanges.size} unsaved • Press <kbd className="px-1.5 py-0.5 bg-[#1e293b] rounded text-xs ml-1">Cmd+S</kbd> to save
             </span>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* New File Modal */}
       {showNewFileModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#1e1e1e] rounded-lg p-6 w-96 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-4">Create New File</h3>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#0a0e1a] rounded-xl p-6 w-96 border border-[#1e293b] shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4 font-['ClashDisplay-Variable'] text-gray-100">Create New File</h3>
             <input
               type="text"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder="path/to/filename.ext"
-              className="w-full bg-[#0e0e0e] border border-gray-700 rounded px-3 py-2 mb-4 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#020617] border border-[#1e293b] rounded-lg px-3 py-2.5 mb-4 focus:outline-none focus:border-blue-500 text-gray-200 font-['DM_Sans']"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCreateFile();
                 if (e.key === 'Escape') {
@@ -1695,13 +1826,13 @@ const EditorPageFinal = () => {
                   setShowNewFileModal(false);
                   setNewFileName('');
                 }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                className="px-4 py-2 bg-[#1e293b] hover:bg-[#334155] rounded-lg transition-all font-['DM_Sans'] font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateFile}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-600/25 font-['DM_Sans'] font-medium"
               >
                 Create
               </button>
@@ -1718,7 +1849,7 @@ const EditorPageFinal = () => {
             onClick={() => setContextMenu(null)}
           />
           <div
-            className="fixed bg-[#1e1e1e] border border-gray-700 rounded shadow-lg py-1 z-50"
+            className="fixed bg-[#0a0e1a] border border-[#1e293b] rounded-lg shadow-2xl py-1 z-50 font-['DM_Sans']"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             {contextMenu.folder ? (
@@ -1737,9 +1868,9 @@ const EditorPageFinal = () => {
                     setCreatingItemType('file');
                     setContextMenu(null);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm"
+                  className="w-full px-4 py-2 text-left hover:bg-[#1e293b] flex items-center gap-2 text-sm transition-all text-gray-300"
                 >
-                  <FilePlus size={14} />
+                  <FilePlus size={14} className="text-blue-400" />
                   New File
                 </button>
                 <button
@@ -1755,9 +1886,14 @@ const EditorPageFinal = () => {
                     setCreatingItemType('folder');
                     setContextMenu(null);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm"
+                  className="w-full px-4 py-2 text-left hover:bg-[#1e293b] flex items-center gap-2 text-sm transition-all text-gray-300"
                 >
-                  <FolderPlus size={14} />
+                  <img 
+                    src="/icons/folder-src.svg" 
+                    alt="folder" 
+                    className="w-4 h-4"
+                    style={{ filter: 'drop-shadow(0 0 2px #60A5FA)' }}
+                  />
                   New Folder
                 </button>
               </>
@@ -1771,16 +1907,16 @@ const EditorPageFinal = () => {
                     setShowRenameModal(true);
                     setContextMenu(null);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm"
+                  className="w-full px-4 py-2 text-left hover:bg-[#1e293b] flex items-center gap-2 text-sm transition-all text-gray-300"
                 >
-                  <Edit2 size={14} />
+                  <Edit2 size={14} className="text-blue-400" />
                   Rename
                 </button>
                 <button
                   onClick={() => {
                     handleDeleteFile(contextMenu.file.path);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-800 flex items-center gap-2 text-sm text-red-400"
+                  className="w-full px-4 py-2 text-left hover:bg-red-900/20 flex items-center gap-2 text-sm text-red-400 transition-all"
                 >
                   <Trash2 size={14} />
                   Delete
@@ -1793,16 +1929,16 @@ const EditorPageFinal = () => {
 
       {/* Rename Modal */}
       {showRenameModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#1e1e1e] rounded-lg p-6 w-96 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-4">Rename File</h3>
-            <p className="text-sm text-gray-400 mb-2">From: {renameFile?.path}</p>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#0a0e1a] rounded-xl p-6 w-96 border border-[#1e293b] shadow-2xl">
+            <h3 className="text-lg font-semibold mb-4 font-['ClashDisplay-Variable'] text-gray-100">Rename File</h3>
+            <p className="text-sm text-gray-400 mb-3 font-['DM_Sans']">From: <span className="text-gray-300">{renameFile?.path}</span></p>
             <input
               type="text"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder="new/path/to/filename.ext"
-              className="w-full bg-[#0e0e0e] border border-gray-700 rounded px-3 py-2 mb-4 focus:outline-none focus:border-blue-500"
+              className="w-full bg-[#020617] border border-[#1e293b] rounded-lg px-3 py-2.5 mb-4 focus:outline-none focus:border-blue-500 text-gray-200 font-['DM_Sans']"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleRenameFile();
                 if (e.key === 'Escape') {
@@ -1820,13 +1956,13 @@ const EditorPageFinal = () => {
                   setRenameFile(null);
                   setNewFileName('');
                 }}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                className="px-4 py-2 bg-[#1e293b] hover:bg-[#334155] rounded-lg transition-all font-['DM_Sans'] font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRenameFile}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-all shadow-lg shadow-blue-600/25 font-['DM_Sans'] font-medium"
               >
                 Rename
               </button>
