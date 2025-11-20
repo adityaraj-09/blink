@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, File, X } from 'lucide-react';
 import { getFileIcon } from '../utils/fileIcons';
+import { searchFiles } from '../utils/fileSearch';
 
 const FileSearchModal = ({ isOpen, onClose, files, onFileSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,22 +14,30 @@ const FileSearchModal = ({ isOpen, onClose, files, onFileSelect }) => {
     }
   }, [isOpen]);
 
-  // Fuzzy search files
-  const filteredFiles = files.filter(file => {
-    const searchLower = searchTerm.toLowerCase();
-    const pathLower = file.path.toLowerCase();
-
-    if (!searchTerm) return true;
-
-    // Simple fuzzy matching
-    let searchIndex = 0;
-    for (let i = 0; i < pathLower.length && searchIndex < searchLower.length; i++) {
-      if (pathLower[i] === searchLower[searchIndex]) {
-        searchIndex++;
-      }
+  // Robust fuzzy search files using utility
+  const filteredFiles = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return files.slice(0, 50);
     }
-    return searchIndex === searchLower.length;
-  }).slice(0, 50); // Limit to 50 results
+    
+    const searchResults = searchFiles(
+      files.map(f => ({ filePath: f.path, name: f.name, fileId: f.fileId })),
+      searchTerm,
+      { maxResults: 50, minScore: 0.1 }
+    );
+    
+    // Map back to expected format with path property
+    return searchResults.map(result => {
+      const originalFile = files.find(f => f.path === result.file.filePath);
+      return {
+        path: result.file.filePath,
+        name: result.file.name || originalFile?.name || result.file.filePath.split('/').pop(),
+        fileId: result.file.fileId || originalFile?.fileId,
+        _score: result.score,
+        _matchType: result.matchType
+      };
+    });
+  }, [files, searchTerm]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -75,7 +84,7 @@ const FileSearchModal = ({ isOpen, onClose, files, onFileSelect }) => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Search files... (type to filter)"
+            placeholder="Search files by name or path... (e.g., 'src/comp' or 'Button.jsx')"
             className="flex-1 bg-transparent border-none outline-none text-white placeholder-gray-500"
           />
           <button

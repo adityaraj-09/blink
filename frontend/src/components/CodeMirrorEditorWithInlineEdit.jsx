@@ -400,10 +400,8 @@ const CodeMirrorEditorWithInlineEdit = ({
       if (suggestion.edits && suggestion.edits.length > 0) {
         // If onShowDiff is provided, show in diff mode
         if (onShowDiff) {
-          // Show the first edit in diff mode
-          // TODO: In the future, we could show all edits in a batch diff view
-          const edit = suggestion.edits[0];
-          onShowDiff(edit, 0);
+          // Show all edits in diff mode
+          onShowDiff(suggestion.edits, 0);
         } else {
           // Fallback: Apply all edits directly
           // Sort edits by line number (descending) to avoid position shifts
@@ -413,14 +411,21 @@ const CodeMirrorEditorWithInlineEdit = ({
             return bLine - aLine; // Process from bottom to top
           });
 
-          // Apply each edit
-          let changes = [];
+          // Apply each edit sequentially to ensure state consistency
+          // Using a sequential approach with re-location ensures subsequent edits find the right place
+          // even if previous edits shifted things slightly (though sorting helps)
+          
+          let finalTransaction = null;
+
+          // We'll apply edits one by one to get the latest state for fuzzy matching
           for (const edit of sortedEdits) {
             if (edit.newCode) {
               let fromPos, toPos;
               
-              // Try to use robust fuzzy locating
+              // Get fresh doc state for each edit
               const currentDoc = view.state.doc.toString();
+              
+              // Try to use robust fuzzy locating
               // Only try fuzzy match if oldCode is provided
               const match = edit.oldCode 
                 ? locateEdit(currentDoc, edit.oldCode, edit.startLine)
@@ -450,21 +455,22 @@ const CodeMirrorEditorWithInlineEdit = ({
                 }
               }
 
-              changes.push({
-                from: fromPos,
-                to: toPos,
-                insert: edit.newCode,
+              // Apply this edit immediately to update state for next iteration
+              const transaction = view.state.update({
+                changes: {
+                  from: fromPos,
+                  to: toPos,
+                  insert: edit.newCode,
+                }
               });
+              view.dispatch(transaction);
             }
           }
 
-          // Apply all changes in a single transaction
-          if (changes.length > 0) {
-            view.dispatch({
-              changes,
-              effects: hideInlineEditEffect.of(),
-            });
-          }
+          // Hide inline widget effects
+          view.dispatch({
+            effects: hideInlineEditEffect.of(),
+          });
         }
       }
 

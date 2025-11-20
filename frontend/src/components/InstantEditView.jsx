@@ -553,7 +553,7 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                               // If onShowDiffInEditor is provided, show diff in main editor
                               // Otherwise, apply directly
                               if (onShowDiffInEditor) {
-                                onShowDiffInEditor(edit, index);
+                                onShowDiffInEditor(edits, index);
                               } else {
                                 onApply(edit, index);
                               }

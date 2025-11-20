@@ -12,6 +12,7 @@ import ProgressiveEditView from './ProgressiveEditView';
 import { getAIEdits, getChatSessions, getChatMessages } from '../api/aiEdit';
 import { syncWithMerkleTree } from '../api/files';
 import { MerkleHasher } from '../services/merkle';
+import { quickSearchFiles } from '../utils/fileSearch';
 
 const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, onFilesChange, onShowDiffInEditor }) => {
   const [mode, setMode] = useState('instant'); // 'instant' or 'progressive'
@@ -297,15 +298,21 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
     setMessage(value);
 
     // Check if user is typing @ for file mention
+    // Support both @filename and @path/to/file patterns
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = value.substring(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    // Match @ followed by word characters, slashes, dots, dashes, underscores
+    const atMatch = textBeforeCursor.match(/@([\w/.\-_]*)$/);
 
     if (atMatch) {
-      const searchTerm = atMatch[1].toLowerCase();
-      const suggestions = files
-        .filter(f => f.filePath.toLowerCase().includes(searchTerm))
-        .slice(0, 5);
+      const searchTerm = atMatch[1];
+      
+      // Use robust file search utility
+      const suggestions = quickSearchFiles(
+        files.map(f => ({ filePath: f.filePath, fileId: f.fileId })),
+        searchTerm,
+        8 // Show more suggestions for better UX
+      );
 
       setFileSuggestions(suggestions);
       setShowFileSuggestions(suggestions.length > 0);
@@ -319,20 +326,45 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
    * Handle file selection from suggestions
    */
   const selectFile = (file) => {
-    const cursorPos = textareaRef.current.selectionStart;
+    if (!file || !file.filePath) {
+      console.warn('[AIChatPanel] Invalid file object:', file);
+      setShowFileSuggestions(false);
+      return;
+    }
+    
+    if (!textareaRef.current) {
+      console.warn('[AIChatPanel] Textarea ref not available');
+      setShowFileSuggestions(false);
+      return;
+    }
+    
+    const cursorPos = textareaRef.current.selectionStart || 0;
     const textBeforeCursor = message.substring(0, cursorPos);
     const textAfterCursor = message.substring(cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    // Match @ followed by word characters, slashes, dots, dashes, underscores (same as handleInputChange)
+    const atMatch = textBeforeCursor.match(/@([\w/.\-_]*)$/);
 
     if (atMatch) {
       const beforeAt = textBeforeCursor.substring(0, textBeforeCursor.length - atMatch[0].length);
       const newMessage = `${beforeAt}@${file.filePath} ${textAfterCursor}`;
       setMessage(newMessage);
 
-      // Track tagged file
-      if (!taggedFiles.find(f => f.filePath === file.filePath)) {
-        setTaggedFiles([...taggedFiles, file]);
+      // Update cursor position after the inserted file path and space
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPos = beforeAt.length + 1 + file.filePath.length + 1;
+          textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+          textareaRef.current.focus();
+        }
+      }, 0);
+
+      // Track tagged file - ensure we have the full file object from files array
+      const fullFile = files.find(f => f.filePath === file.filePath);
+      if (fullFile && !taggedFiles.find(f => f.filePath === file.filePath)) {
+        setTaggedFiles([...taggedFiles, fullFile]);
       }
+    } else {
+      console.warn('[AIChatPanel] No @ match found in text before cursor:', textBeforeCursor);
     }
 
     setShowFileSuggestions(false);
@@ -675,20 +707,29 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
         {/* Input Area */}
         <div className="p-4 border-t border-[#1e293b] bg-[#0a0e1a] relative">
           {/* File Suggestions Dropdown */}
-          {showFileSuggestions && (
+          {showFileSuggestions && fileSuggestions.length > 0 && (
             <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#0a0e1a] border border-[#1e293b] rounded-lg shadow-2xl max-h-40 overflow-y-auto z-50">
-              {fileSuggestions.map((file, index) => (
-                <button
-                  key={file.filePath}
-                  onClick={() => selectFile(file)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-[#1e293b] flex items-center gap-2 text-gray-300 font-['DM_Sans'] transition-all ${
-                    index === selectedFileIndex ? 'bg-[#1e293b]' : ''
-                  }`}
-                >
-                  <FileText size={14} className="text-blue-400" />
-                  <span>{file.filePath}</span>
-                </button>
-              ))}
+              {fileSuggestions.map((file, index) => {
+                if (!file || !file.filePath) return null;
+                
+                return (
+                  <button
+                    key={`${file.filePath}-${index}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      selectFile(file);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-[#1e293b] flex items-center gap-2 text-gray-300 font-['DM_Sans'] transition-all ${
+                      index === selectedFileIndex ? 'bg-[#1e293b]' : ''
+                    }`}
+                    type="button"
+                  >
+                    <FileText size={14} className="text-blue-400" />
+                    <span className="truncate">{file.filePath}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
 

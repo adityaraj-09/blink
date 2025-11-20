@@ -51,6 +51,7 @@ import { Language, getLanguageFromExtension } from '../services/chunker';
 import { getFileIcon, getFolderIcon } from '../utils/fileIcons';
 import { MerkleHasher } from '../services/merkle';
 import { FileSystemSync } from '../services/webcontainer';
+import { locateEdit } from '../utils/fuzzyMatch';
 
 // Folder icon variants with different colors (15 unique types)
 const FOLDER_ICONS = [
@@ -140,8 +141,8 @@ const EditorPageFinal = () => {
 
   // Diff mode state
   const [diffMode, setDiffMode] = useState(false);
-  const [currentDiffEdit, setCurrentDiffEdit] = useState(null);
-  const [diffEditIndex, setDiffEditIndex] = useState(null);
+  const [currentDiffEdits, setCurrentDiffEdits] = useState([]); // Array of edits
+  const [diffEditIndex, setDiffEditIndex] = useState(null); // Current index being viewed (if any)
 
   // Editor settings
   const [editorSettings, setEditorSettings] = useState({
@@ -985,97 +986,148 @@ const EditorPageFinal = () => {
   };
 
   /**
-   * Show diff for an edit in the main editor area
+   * Show diff for edits in the main editor area
    */
-  const handleShowDiffInEditor = (edit, editIndex) => {
-    console.log('[Editor] Showing diff in editor for:', edit.file, editIndex);
+  const handleShowDiffInEditor = (edits, initialIndex = 0) => {
+    // Normalize to array
+    const editsArray = Array.isArray(edits) ? edits : [edits];
+    
+    if (editsArray.length === 0) return;
+    
+    const firstEdit = editsArray[0];
+    console.log('[Editor] Showing diff in editor for:', firstEdit.file, initialIndex);
 
     // Open the file if not already open
-    const file = files.find(f => f.filePath === edit.file);
+    const file = files.find(f => f.filePath === firstEdit.file);
     if (file) {
       const treeNode = {
         id: file.fileId,
-        name: edit.file.split('/').pop(),
-        path: edit.file,
+        name: firstEdit.file.split('/').pop(),
+        path: firstEdit.file,
         type: 'file',
         fileData: file
       };
 
       // Add to open tabs if not already open
-      if (!openTabs.find(f => f.path === edit.file)) {
+      if (!openTabs.find(f => f.path === firstEdit.file)) {
         setOpenTabs([...openTabs, treeNode]);
       }
-      setActiveTab(edit.file);
+      setActiveTab(firstEdit.file);
     }
 
     // Set diff mode
-    setCurrentDiffEdit(edit);
-    setDiffEditIndex(editIndex);
+    setCurrentDiffEdits(editsArray);
+    setDiffEditIndex(initialIndex);
     setDiffMode(true);
   };
 
   /**
    * Apply edit from diff viewer
    */
-  const handleAcceptDiff = () => {
-    if (!currentDiffEdit) return;
+  const handleAcceptDiff = (indexToApply) => {
+    // Determine which edits to apply
+    let editsToApply = [];
+    
+    if (typeof indexToApply === 'number') {
+      // Apply single edit
+      if (currentDiffEdits[indexToApply]) {
+        editsToApply = [currentDiffEdits[indexToApply]];
+      }
+    } else {
+      // Apply all edits
+      editsToApply = [...currentDiffEdits];
+    }
+
+    if (editsToApply.length === 0) return;
 
     try {
-      // Get current file content
-      let currentContent = fileContents[currentDiffEdit.file] || '';
+      // Apply all edits sequentially
+      // Sort by line number (descending) to avoid position shifts for simple line-based edits
+      // But for robust multi-edit, we rely on fuzzy matching + sequential application
+      const sortedEdits = [...editsToApply].sort((a, b) => {
+        const aLine = a.startLine || 0;
+        const bLine = b.startLine || 0;
+        return bLine - aLine; // Bottom to top
+      });
 
-      // Apply the edit based on action
-      let newContent = '';
+      // Get current file content (starting point)
+      const targetFile = sortedEdits[0].file;
+      let currentContent = fileContents[targetFile] || '';
 
-      if (currentDiffEdit.action === 'create') {
-        newContent = currentDiffEdit.newCode || '';
+      for (const edit of sortedEdits) {
+        // For replace/delete/insert, we need to re-locate the edit in the current content
+        // because previous edits in the loop might have shifted things
+        
+        let newContent = '';
 
-        // Create file if it doesn't exist
-        if (!files.find(f => f.filePath === currentDiffEdit.file)) {
-          const detectedLanguage = getLanguageFromExtension(currentDiffEdit.file);
-          setLocalFiles(prev => new Set(prev).add(currentDiffEdit.file));
+        if (edit.action === 'create') {
+          newContent = edit.newCode || '';
+          
+          // Create file if it doesn't exist
+          if (!files.find(f => f.filePath === edit.file)) {
+            const detectedLanguage = getLanguageFromExtension(edit.file);
+            setLocalFiles(prev => new Set(prev).add(edit.file));
 
-          const newFile = {
-            fileId: `local-${Date.now()}`,
-            filePath: currentDiffEdit.file,
-            language: detectedLanguage,
-            sizeBytes: newContent.length,
-            lineCount: newContent.split('\n').length,
-            indexedAt: Date.now()
-          };
-          setFiles(prev => [...prev, newFile]);
+            const newFile = {
+              fileId: `local-${Date.now()}`,
+              filePath: edit.file,
+              language: detectedLanguage,
+              sizeBytes: newContent.length,
+              lineCount: newContent.split('\n').length,
+              indexedAt: Date.now()
+            };
+            setFiles(prev => [...prev, newFile]);
 
-          const updatedFiles = [...files, newFile];
-          const tree = buildFileTree(updatedFiles);
-          setFileTree(tree);
+            const updatedFiles = [...files, newFile];
+            const tree = buildFileTree(updatedFiles);
+            setFileTree(tree);
 
-          setFileLanguages(prev => ({
-            ...prev,
-            [currentDiffEdit.file]: detectedLanguage
-          }));
+            setFileLanguages(prev => ({
+              ...prev,
+              [edit.file]: detectedLanguage
+            }));
+          }
+        } else {
+          // For existing files, use robust application
+          if (edit.action === 'replace') {
+            newContent = applyReplace(currentContent, edit);
+          } else if (edit.action === 'insert') {
+            newContent = applyInsert(currentContent, edit);
+          } else if (edit.action === 'delete') {
+            newContent = applyDelete(currentContent, edit);
+          }
         }
-      } else if (currentDiffEdit.action === 'replace') {
-        newContent = applyReplace(currentContent, currentDiffEdit);
-      } else if (currentDiffEdit.action === 'insert') {
-        newContent = applyInsert(currentContent, currentDiffEdit);
-      } else if (currentDiffEdit.action === 'delete') {
-        newContent = applyDelete(currentContent, currentDiffEdit);
+        
+        // Update content for next iteration
+        currentContent = newContent;
       }
 
-      // Update file contents
+      // Update file contents finally
       setFileContents(prev => ({
         ...prev,
-        [currentDiffEdit.file]: newContent
+        [targetFile]: currentContent
       }));
 
-      setUnsavedChanges(prev => new Set(prev).add(currentDiffEdit.file));
+      setUnsavedChanges(prev => new Set(prev).add(targetFile));
 
-      // Exit diff mode
-      setDiffMode(false);
-      setCurrentDiffEdit(null);
-      setDiffEditIndex(null);
+      // Remove applied edits from the list if we only applied one
+      if (typeof indexToApply === 'number') {
+        const newEdits = currentDiffEdits.filter((_, i) => i !== indexToApply);
+        if (newEdits.length === 0) {
+           setDiffMode(false);
+           setCurrentDiffEdits([]);
+           setDiffEditIndex(null);
+        } else {
+           setCurrentDiffEdits(newEdits);
+        }
+      } else {
+        // Applied all
+        setDiffMode(false);
+        setCurrentDiffEdits([]);
+        setDiffEditIndex(null);
+      }
 
-      console.log('[Editor] Edit applied successfully');
+      console.log('[Editor] Edit(s) applied successfully');
     } catch (err) {
       console.error('[Editor] Failed to apply edit:', err);
       alert(`Failed to apply edit: ${err.message}`);
@@ -1085,10 +1137,22 @@ const EditorPageFinal = () => {
   /**
    * Reject diff and exit diff mode
    */
-  const handleRejectDiff = () => {
-    setDiffMode(false);
-    setCurrentDiffEdit(null);
-    setDiffEditIndex(null);
+  const handleRejectDiff = (indexToReject) => {
+    if (typeof indexToReject === 'number') {
+        const newEdits = currentDiffEdits.filter((_, i) => i !== indexToReject);
+        if (newEdits.length === 0) {
+           setDiffMode(false);
+           setCurrentDiffEdits([]);
+           setDiffEditIndex(null);
+        } else {
+           setCurrentDiffEdits(newEdits);
+        }
+    } else {
+        // Reject all
+        setDiffMode(false);
+        setCurrentDiffEdits([]);
+        setDiffEditIndex(null);
+    }
   };
 
   // Helper functions for applying edits
@@ -1097,6 +1161,17 @@ const EditorPageFinal = () => {
       throw new Error('New code is required for replace action');
     }
 
+    // Try fuzzy match first
+    if (edit.oldCode) {
+       const match = locateEdit(content, edit.oldCode, edit.startLine);
+       if (match.matchType !== 'not_found') {
+         const before = content.slice(0, match.startIndex);
+         const after = content.slice(match.endIndex);
+         return before + edit.newCode + after;
+       }
+    }
+
+    // Fallback to line numbers
     if (edit.startLine && edit.endLine) {
       const lines = content.split('\n');
       const before = lines.slice(0, edit.startLine - 1);
@@ -1106,14 +1181,7 @@ const EditorPageFinal = () => {
       return [...before, ...newLines, ...after].join('\n');
     }
 
-    if (edit.oldCode) {
-      if (content.includes(edit.oldCode)) {
-        return content.replace(edit.oldCode, edit.newCode);
-      }
-      throw new Error('Old code not found in file');
-    }
-
-    throw new Error('Replace action requires either line numbers or old code');
+    throw new Error('Replace action requires either valid old code matching or line numbers');
   };
 
   const applyInsert = (content, edit) => {
@@ -1143,6 +1211,16 @@ const EditorPageFinal = () => {
   };
 
   const applyDelete = (content, edit) => {
+     // Try fuzzy match first
+    if (edit.oldCode) {
+       const match = locateEdit(content, edit.oldCode, edit.startLine);
+       if (match.matchType !== 'not_found') {
+         const before = content.slice(0, match.startIndex);
+         const after = content.slice(match.endIndex);
+         return before + after;
+       }
+    }
+
     if (edit.startLine && edit.endLine) {
       const lines = content.split('\n');
       const before = lines.slice(0, edit.startLine - 1);
@@ -1150,11 +1228,7 @@ const EditorPageFinal = () => {
       return [...before, ...after].join('\n');
     }
 
-    if (edit.oldCode) {
-      return content.replace(edit.oldCode, '');
-    }
-
-    throw new Error('Delete action requires either line numbers or old code');
+    throw new Error('Delete action requires either valid old code matching or line numbers');
   };
 
   // Render file tree recursively
@@ -1539,32 +1613,31 @@ const EditorPageFinal = () => {
           <div className="flex-1 overflow-hidden relative">
             {activeTab ? (
               <>
-                {diffMode && currentDiffEdit ? (
+                {diffMode && currentDiffEdits.length > 0 ? (
                   // Show diff viewer
                   <div className="h-full flex flex-col bg-[#020617]">
                     {/* Diff Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e293b] bg-[#0a0e1a]">
                       <div>
-                        <h3 className="font-semibold text-gray-200 mb-1">Review Edit</h3>
+                        <h3 className="font-semibold text-gray-200 mb-1">Review Edits</h3>
                         <p className="text-xs text-gray-500">
-                          {currentDiffEdit.file} • {currentDiffEdit.action}
-                          {currentDiffEdit.startLine && ` • Lines ${currentDiffEdit.startLine}-${currentDiffEdit.endLine}`}
+                          {currentDiffEdits.length} Edit{currentDiffEdits.length !== 1 ? 's' : ''} • {currentDiffEdits[0].file}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={handleRejectDiff}
+                          onClick={() => handleRejectDiff()}
                           className="px-3 py-1.5 bg-[#1e293b] hover:bg-[#334155] rounded flex items-center gap-2 text-sm font-medium transition-colors text-gray-300"
                         >
                           <XCircle size={16} />
-                          Cancel
+                          Cancel All
                         </button>
                         <button
-                          onClick={handleAcceptDiff}
+                          onClick={() => handleAcceptDiff()}
                           className="px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded flex items-center gap-2 text-sm font-medium transition-colors"
                         >
                           <CheckCircle size={16} />
-                          Apply Changes
+                          Apply All
                         </button>
                       </div>
                     </div>
@@ -1572,11 +1645,11 @@ const EditorPageFinal = () => {
                     {/* Diff Viewer */}
                     <div className="flex-1 overflow-hidden">
                       <CodeMirrorDiffViewer
-                        edits={[currentDiffEdit]}
-                        onAcceptEdit={handleAcceptDiff}
-                        onRejectEdit={handleRejectDiff}
-                        onAcceptAll={handleAcceptDiff}
-                        onRejectAll={handleRejectDiff}
+                        edits={currentDiffEdits}
+                        onAcceptEdit={(index) => handleAcceptDiff(index)}
+                        onRejectEdit={(index) => handleRejectDiff(index)}
+                        onAcceptAll={() => handleAcceptDiff()}
+                        onRejectAll={() => handleRejectDiff()}
                         fileContents={fileContents}
                       />
                     </div>

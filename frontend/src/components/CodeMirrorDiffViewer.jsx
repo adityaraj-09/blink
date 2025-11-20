@@ -170,8 +170,8 @@ const SingleEditDiff = ({ edit, index, onAccept, onReject, language, isExpanded,
               <div className="text-xs text-gray-400 mb-2">New File Content:</div>
               <div
                 ref={mergeViewRef}
-                className="border border-[#3d3d3d] rounded overflow-hidden"
-                style={{ maxHeight: '400px' }}
+                className="border border-[#3d3d3d] rounded overflow-auto"
+                style={{ height: '400px' }}
               />
             </div>
           ) : edit.action === 'delete' ? (
@@ -180,8 +180,8 @@ const SingleEditDiff = ({ edit, index, onAccept, onReject, language, isExpanded,
               <div className="text-xs text-gray-400 mb-2">Content to Delete:</div>
               <div
                 ref={mergeViewRef}
-                className="border border-[#3d3d3d] rounded overflow-hidden"
-                style={{ maxHeight: '400px' }}
+                className="border border-[#3d3d3d] rounded overflow-auto"
+                style={{ height: '400px' }}
               />
             </div>
           ) : (
@@ -193,8 +193,8 @@ const SingleEditDiff = ({ edit, index, onAccept, onReject, language, isExpanded,
               </div>
               <div
                 ref={mergeViewRef}
-                className="border border-[#3d3d3d] rounded overflow-hidden"
-                style={{ maxHeight: '400px' }}
+                className="border border-[#3d3d3d] rounded overflow-auto"
+                style={{ height: '400px' }}
               />
             </div>
           )}
