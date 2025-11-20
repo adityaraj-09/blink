@@ -109,9 +109,15 @@ const EditorPageFinal = () => {
   const [openTabs, setOpenTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [fileContents, setFileContents] = useState({});
+  const fileContentsRef = useRef({}); // Ref to access latest content in event handlers
   const [fileLanguages, setFileLanguages] = useState({}); // Store language for each file
   const [localFiles, setLocalFiles] = useState(new Set()); // Track locally-created files not yet saved
   const [unsavedChanges, setUnsavedChanges] = useState(new Set());
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    fileContentsRef.current = fileContents;
+  }, [fileContents]);
 
   // UI state
   const [showAIChat, setShowAIChat] = useState(false);
@@ -177,6 +183,9 @@ const EditorPageFinal = () => {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // If event was already handled (e.g. by CodeMirror), don't handle it again
+      if (e.defaultPrevented) return;
+
       // Cmd+S or Ctrl+S - Save
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
@@ -529,7 +538,8 @@ const EditorPageFinal = () => {
 
       // Build file list from local state
       const fileList = [];
-      for (const [path, content] of Object.entries(fileContents)) {
+      const currentContents = fileContentsRef.current;
+      for (const [path, content] of Object.entries(currentContents)) {
         fileList.push({
           path,
           content,
@@ -552,9 +562,9 @@ const EditorPageFinal = () => {
         // Step 2: Send only the content of changed files
         const filesData = {};
         for (const changedPath of compareResult.needsFiles) {
-          if (fileContents[changedPath] !== undefined) {
+          if (currentContents[changedPath] !== undefined) {
             filesData[changedPath] = {
-              content: fileContents[changedPath],
+              content: currentContents[changedPath],
               lastModified: Date.now()
             };
           } else {

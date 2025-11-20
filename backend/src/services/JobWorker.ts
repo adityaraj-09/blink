@@ -328,15 +328,20 @@ ${vectorContext}
 Respond with ONE <edit> tag:
 
 <edit file="${currentStep.filePath}" action="create">
+<new>
 [Complete file content]
+</new>
 </edit>
 
 OR
 
 <edit file="${currentStep.filePath}" start="10" end="20" action="replace">
+<old>
 [Old code]
----
+</old>
+<new>
 [New code]
+</new>
 </edit>
 
 Implement this step now:`;

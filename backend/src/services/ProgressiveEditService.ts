@@ -874,8 +874,8 @@ EDIT ACTIONS:
 CRITICAL RULES:
 1. **Multiple edits allowed** - Include multiple objects in the edits array for multi-file changes
 2. **Use exact file paths** - Use the paths you discovered through tools
-3. **CRITICAL**: Ensure oldCode matches the actual file content EXACTLY, character-for-character. The frontend uses this to locate the edit.
-4. **ANCHORING**: When replacing code, ALWAYS include 2-3 lines of UNIQUE surrounding context in oldCode. This serves as an "anchor" to find the correct location even if line numbers shift.
+3. **CRITICAL**: Ensure oldCode includes EXACTLY the code from the specified line range (startLine to endLine). Match character-for-character including whitespace.
+4. The frontend uses fuzzy matching to locate edits, so exact line range content is sufficient - no need for extra surrounding context.
 5. **Complete code** - Provide full, working implementations, not snippets
 6. **All imports** - Include all necessary imports and dependencies
 7. **Production-ready** - Follow best practices, handle errors, add types

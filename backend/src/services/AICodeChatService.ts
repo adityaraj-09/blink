@@ -146,17 +146,20 @@ Add some explanation of the code changes/suggestions. and then add the code edit
 Always Use <edit> XML tags for  any code changes/suggestions.Always provide a code edit if the user asks to change code.
 
 <edit file="relative/path/to/file.ts" start="15" end="20" action="replace">
+<old>
 [EXACT OLD CODE from the file - must match exactly]
----
+</old>
+<new>
 [NEW CODE with your improvements]
+</new>
 </edit>
 
 EDIT TAG RULES:
 1. **action** can be: "create", "replace", "insert", or "delete"
-2. For **create**: Create new file, only NEW CODE needed (entire file content)
-3. For **replace**: Include start/end line numbers and OLD CODE --- NEW CODE
-4. For **insert**: Use "after" attribute (line number), only NEW CODE needed
-5. For **delete**: Include start/end line numbers and OLD CODE to remove
+2. For **create**: Create new file, use <new> tag with entire file content
+3. For **replace**: Include start/end line numbers with <old> and <new> tags
+4. For **insert**: Use "after" attribute (line number), use <new> tag only
+5. For **delete**: Include start/end line numbers, use <old> tag only
 
 EXAMPLES:
 
@@ -521,22 +524,26 @@ WHEN TO USE CODE EDITS:
 CODE EDIT FORMAT (use this XML format ONLY when proposing code changes):
 
 <edit file="relative/path/to/file.ts" start="15" end="20" action="replace">
+<old>
 [EXACT OLD CODE from the file - must match exactly]
----
+</old>
+<new>
 [NEW CODE with your improvements]
+</new>
 </edit>
 
 EDIT TAG RULES:
 1. **action** can be: "create", "replace", "insert", or "delete"
-2. For **create**: Create new file, only NEW CODE needed (entire file content)
-3. For **replace**: Include start/end line numbers and OLD CODE --- NEW CODE
-4. For **insert**: Use "after" attribute (line number), only NEW CODE needed
-5. For **delete**: Include start/end line numbers and OLD CODE to remove
+2. For **create**: Create new file, use <new> tag with entire file content
+3. For **replace**: Include start/end line numbers with <old> and <new> tags
+4. For **insert**: Use "after" attribute (line number), use <new> tag only
+5. For **delete**: Include start/end line numbers, use <old> tag only
 
 EXAMPLES:
 
 **Create New File Example:**
 <edit file="src/types/user.ts" action="create">
+<new>
 export interface User {
   id: string;
   email: string;
@@ -549,29 +556,37 @@ export interface UserSession {
   token: string;
   expiresAt: Date;
 }
+</new>
 </edit>
 
 **Replace Example:**
 <edit file="src/auth.ts" start="15" end="20" action="replace">
+<old>
 if (user.password == inputPassword) {
   return true;
 }
----
+</old>
+<new>
 if (await bcrypt.compare(inputPassword, user.password)) {
   return true;
 }
+</new>
 </edit>
 
 **Insert Example:**
 <edit file="src/auth.ts" after="5" action="insert">
+<new>
 import bcrypt from 'bcrypt';
+</new>
 </edit>
 
 **Delete Example:**
 <edit file="src/utils.ts" start="45" end="50" action="delete">
+<old>
 function deprecatedHelper() {
   // old code
 }
+</old>
 </edit>
 
 CAPABILITIES:
@@ -587,9 +602,9 @@ CAPABILITIES:
 GUIDELINES:
 1. Always explain WHY before showing edits
 2. Reference specific files and line numbers
-3. **CRITICAL**: Ensure oldCode matches the actual file content EXACTLY, character-for-character. The frontend uses this to locate the edit.
-4. **ANCHORING**: When replacing code, ALWAYS include 2-3 lines of UNIQUE surrounding context in oldCode. This serves as an "anchor" to find the correct location even if line numbers shift.
-5. Provide complete, working code in NEW CODE
+3. **CRITICAL**: In <old> tag, include EXACTLY the code from the specified line range (start to end). Match character-for-character including whitespace.
+4. The frontend uses fuzzy matching to locate edits, so exact line range content is sufficient - no need for extra surrounding context.
+5. Provide complete, working code in <new> tag
 6. Always provide a code edit if the user asks to change code.
 7. Consider dependencies (imports, etc.)
 8. Maintain code style and conventions

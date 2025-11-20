@@ -92,6 +92,12 @@ export class AICodeEditService {
   /**
    * Parse XML format edits (LEGACY FORMAT - for backward compatibility)
    * Format: <edit file="path" start="10" end="15" action="replace">...</edit>
+   * 
+   * NEW FORMAT (preferred):
+   * <edit file="path" start="10" end="15" action="replace">
+   *   <old>old code</old>
+   *   <new>new code</new>
+   * </edit>
    */
   private parseXmlEdits(llmResponse: string): { explanation: string; edits: CodeEdit[] } {
     // Extract plain text explanation (everything outside <edit> tags)
@@ -111,9 +117,6 @@ export class AICodeEditService {
       // Parse attributes
       const attrs = this.parseAttributes(attributes);
 
-      // Split content by --- separator (OLD CODE --- NEW CODE)
-      const parts = content.split(/\n?---+\n?/);
-
       const edit: CodeEdit = {
         file: attrs.file || '',
         action: (attrs.action as EditAction) || 'replace',
@@ -122,17 +125,43 @@ export class AICodeEditService {
         afterLine: attrs.after ? parseInt(attrs.after) : undefined
       };
 
+      // Try NEW format first: <old></old> and <new></new> tags
+      const oldMatch = content.match(/<old>([\s\S]*?)<\/old>/);
+      const newMatch = content.match(/<new>([\s\S]*?)<\/new>/);
+
       // Handle different actions
       if (edit.action === 'replace') {
-        edit.oldCode = parts[0]?.trim();
-        edit.newCode = parts[1]?.trim();
+        if (oldMatch && newMatch) {
+          // NEW format with tags
+          edit.oldCode = oldMatch[1].trim();
+          edit.newCode = newMatch[1].trim();
+        } else {
+          // LEGACY format: fallback to --- separator
+          const parts = content.split(/\n?---+\n?/);
+          edit.oldCode = parts[0]?.trim();
+          edit.newCode = parts[1]?.trim();
+        }
       } else if (edit.action === 'insert') {
-        edit.newCode = parts[0]?.trim() || content.trim();
+        // For insert, prefer <new> tag, fallback to raw content
+        if (newMatch) {
+          edit.newCode = newMatch[1].trim();
+        } else {
+          edit.newCode = content.split(/\n?---+\n?/)[0]?.trim() || content.trim();
+        }
       } else if (edit.action === 'delete') {
-        edit.oldCode = parts[0]?.trim() || content.trim();
+        // For delete, prefer <old> tag, fallback to raw content
+        if (oldMatch) {
+          edit.oldCode = oldMatch[1].trim();
+        } else {
+          edit.oldCode = content.split(/\n?---+\n?/)[0]?.trim() || content.trim();
+        }
       } else if (edit.action === 'create') {
-        // For create, entire content is the new file content
-        edit.newCode = content.trim();
+        // For create, prefer <new> tag for consistency, fallback to entire content
+        if (newMatch) {
+          edit.newCode = newMatch[1].trim();
+        } else {
+          edit.newCode = content.trim();
+        }
         edit.oldCode = undefined; // No old code for new files
       }
 

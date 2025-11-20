@@ -277,7 +277,7 @@ export async function getInlineEdit(request: InlineEditRequest): Promise<InlineE
     message: `${request.instruction}`,
     fileContext: {
       filePath: request.filePath,
-      content: request.fullFileContent,
+      content: request.selectedCode,
       startLine: request.startLine,
       endLine: request.endLine,
     },
