@@ -19,6 +19,7 @@ import { useAuth } from '@clerk/clerk-react';
 import { getProjects } from '../api/projects';
 import { useGitHub } from '../hooks/useGitHub';
 import { useAPIAuth } from '../hooks/useAPI';
+import { isElectron } from '../services/electron';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -76,8 +77,11 @@ const DashboardPage = () => {
     handleGitHubCallback();
   }, [isLoaded, isSignedIn, searchParams, setSearchParams, completeAuth]);
 
-  // Redirect to sign in if not authenticated
+  // Redirect to sign in if not authenticated (web only - Electron uses ProtectedRoute)
   useEffect(() => {
+    // Skip in Electron - ProtectedRoute handles auth
+    if (isElectron()) return;
+
     if (isLoaded && !isSignedIn) {
       console.log('User not signed in, redirecting to sign in page');
       navigate('/sign-in');
@@ -86,7 +90,9 @@ const DashboardPage = () => {
 
   // Load projects from backend on mount
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
+    // In Electron, always load (auth is handled by ProtectedRoute)
+    // In web, wait for Clerk auth
+    if (isElectron() || (isLoaded && isSignedIn)) {
       console.log('📂 Loading projects...');
       loadProjects();
     }

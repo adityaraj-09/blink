@@ -21,6 +21,7 @@ interface UseWebContainerResult extends WebContainerState {
   spawnProcess: (command: string, args?: string[], options?: any) => Promise<WebContainerProcess>;
   installPackages: (packages?: string[], dev?: boolean) => Promise<{ exitCode: number; output: string }>;
   startDevServer: (command?: string, args?: string[]) => Promise<WebContainerProcess>;
+  resetForNewProject: () => Promise<void>;
   teardown: () => Promise<void>;
 }
 
@@ -230,6 +231,28 @@ export function useWebContainer(): UseWebContainerResult {
   );
 
   /**
+   * Reset WebContainer for new project (clears files without full teardown)
+   */
+  const resetForNewProject = useCallback(async () => {
+    try {
+      await webContainerService.resetForNewProject();
+      fileSystemSync.clearCache();
+      // Reset server state but keep booted state
+      setState((prev) => ({
+        ...prev,
+        serverUrl: null,
+        serverPort: null,
+        error: null,
+      }));
+      console.log('[useWebContainer] Reset for new project complete');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset WebContainer';
+      setState((prev) => ({ ...prev, error: errorMessage }));
+      throw error;
+    }
+  }, []);
+
+  /**
    * Teardown WebContainer
    */
   const teardown = useCallback(async () => {
@@ -269,6 +292,7 @@ export function useWebContainer(): UseWebContainerResult {
     spawnProcess,
     installPackages,
     startDevServer,
+    resetForNewProject,
     teardown,
   };
 }

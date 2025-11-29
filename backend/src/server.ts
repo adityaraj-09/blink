@@ -58,6 +58,11 @@ import { createProgressiveEditRoutes } from './routes/progressiveEdit';
 import { createJobStreamRoutes } from './routes/jobStream';
 import { createUsersRouter } from './routes/users';
 import { JobWorker } from './services/JobWorker';
+// New routes for local projects and custom chat
+import { createLocalProjectRoutes } from './routes/localProjects';
+import { createLocalIngestRoutes } from './routes/localIngest';
+import { createCustomChatRoutes } from './routes/customChat';
+import { createElectronAuthRoutes } from './routes/electronAuth';
 
 // Configuration
 const PORT = parseInt(process.env.PORT || '3000');
@@ -225,6 +230,9 @@ app.use(cors({
   origin:  '*',
   credentials: true,
 }));
+
+
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -310,6 +318,21 @@ if (progressiveEditService) {
 // Job Stream routes (SSE for real-time job progress)
 app.use('/api/jobs', createJobStreamRoutes(db));
 log.info('✓ Job Stream routes registered');
+
+// Local project routes (for opening local folders)
+app.use('/api/local-projects', createLocalProjectRoutes(db));
+app.use('/api/local-ingest', createLocalIngestRoutes(db, fileIngestionService));
+log.info('✓ Local project routes registered');
+
+
+const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || 'pk_test_dG91Z2gtbW9ua2Zpc2gtNTMuY2xlcmsuYWNjb3VudHMuZGV2JA';
+app.use('/auth', createElectronAuthRoutes(clerkPublishableKey));
+log.info('✓ Electron auth routes registered');
+// Custom chat routes (using backend LLM)
+if (aiCodeChatService) {
+  app.use('/api/custom-chat', createCustomChatRoutes(db, aiCodeChatService));
+  log.info('✓ Custom chat routes registered');
+}
 
 // 404 handler
 app.use((req, res) => {

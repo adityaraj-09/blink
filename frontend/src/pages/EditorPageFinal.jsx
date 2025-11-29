@@ -42,11 +42,13 @@ import GitPanel from '../components/GitPanel';
 import WebContainerTerminal from '../components/WebContainerTerminal';
 import SettingsPanel from '../components/SettingsPanel';
 import BrowserCompatibilityWarning from '../components/BrowserCompatibilityWarning';
+import PreviewPanel from '../components/PreviewPanel';
 import { useAPIAuth } from '../hooks/useAPI';
 import { getProject, getProjectFiles, getAllFilesWithContent } from '../api/projects';
 import { getFileContent, updateFileContent, deleteFile, syncWithMerkleTree } from '../api/files';
 import { useCodeIngestion } from '../hooks/useCodeIngestion';
 import { useWebContainer } from '../hooks/useWebContainer';
+import { initWebContainerAuth } from '../services/webcontainer/init';
 import { Language, getLanguageFromExtension } from '../services/chunker';
 import { getFileIcon, getFolderIcon } from '../utils/fileIcons';
 import { MerkleHasher } from '../services/merkle';
@@ -176,6 +178,7 @@ const EditorPageFinal = () => {
     bootContainer,
     mountFiles: wcMountFiles,
     writeFile: wcWriteFile,
+    resetForNewProject: wcResetForNewProject,
   } = useWebContainer();
 
   const [wcFiles, setWcFiles] = useState({});
@@ -278,6 +281,16 @@ const EditorPageFinal = () => {
       setLoading(true);
       setError(null);
 
+      // Reset all state for new project
+      setOpenTabs([]);
+      setActiveTab(null);
+      setFileContents({});
+      setFileLanguages({});
+      setLocalFiles(new Set());
+      setUnsavedChanges(new Set());
+      setExpandedFolders(new Set(['root']));
+      hasMountedFilesRef.current = false;
+
       console.log('📂 Loading project data and all files with content...');
 
       // Fetch project info and all files with content
@@ -349,12 +362,21 @@ const EditorPageFinal = () => {
     }
   };
 
-  // Boot WebContainer on mount
+  // Initialize WebContainer auth and boot on mount
+  const wcAuthInitializedRef = useRef(false);
   useEffect(() => {
     let mounted = true;
 
-    const boot = async () => {
+    const initAndBoot = async () => {
       try {
+        // Initialize WebContainer auth only once
+        if (!wcAuthInitializedRef.current) {
+          console.log('[Editor] Initializing WebContainer auth...');
+          initWebContainerAuth();
+          wcAuthInitializedRef.current = true;
+        }
+
+        // Boot the container
         await bootContainer();
       } catch (err) {
         if (mounted) {
@@ -363,19 +385,48 @@ const EditorPageFinal = () => {
       }
     };
 
-    boot();
+    initAndBoot();
 
     return () => {
       mounted = false;
     };
   }, []); // Empty deps = runs only once on mount
 
-  // Mount files to WebContainer when they're loaded (only once)
+  // Track current project ID for WebContainer reset
+  const previousProjectIdRef = useRef(null);
   const hasMountedFilesRef = useRef(false);
+
+  // Reset WebContainer when project changes
+  useEffect(() => {
+    const resetAndPrepare = async () => {
+      if (projectId && previousProjectIdRef.current && previousProjectIdRef.current !== projectId) {
+        console.log(`[Editor] Project changed from ${previousProjectIdRef.current} to ${projectId}, resetting WebContainer...`);
+
+        // Reset WebContainer for new project
+        hasMountedFilesRef.current = false;
+        setWcFiles({});
+        setShowPreview(false);
+
+        if (wcBooted) {
+          try {
+            await wcResetForNewProject();
+            console.log('[Editor] WebContainer reset complete');
+          } catch (err) {
+            console.error('[Editor] Failed to reset WebContainer:', err);
+          }
+        }
+      }
+      previousProjectIdRef.current = projectId;
+    };
+
+    resetAndPrepare();
+  }, [projectId, wcBooted, wcResetForNewProject]);
+
+  // Mount files to WebContainer when they're loaded
   useEffect(() => {
     if (wcBooted && Object.keys(fileContents).length > 0 && !hasMountedFilesRef.current) {
       hasMountedFilesRef.current = true;
-      
+
       const convertedFiles = FileSystemSync.convertToWebContainerFormat(
         Object.entries(fileContents).map(([path, content]) => ({
           path,
@@ -391,7 +442,7 @@ const EditorPageFinal = () => {
         hasMountedFilesRef.current = false; // Allow retry on error
       });
     }
-  }, [wcBooted, fileContents.length]); // Only depend on wcBooted and number of files, not the content itself
+  }, [wcBooted, Object.keys(fileContents).length]); // Only depend on wcBooted and number of files, not the content itself
 
   // Sync file changes to WebContainer
   const syncFileToWebContainer = useCallback(async (path, content) => {
@@ -1479,8 +1530,8 @@ const EditorPageFinal = () => {
           </div>
         </div>
 
-        {/* Editor Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Editor Area + Terminal Column */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Tabs - Compact */}
           {openTabs.length > 0 && (
             <div 
@@ -1610,7 +1661,7 @@ const EditorPageFinal = () => {
           )}
 
           {/* Editor */}
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 overflow-hidden relative min-h-0">
             {activeTab ? (
               <>
                 {diffMode && currentDiffEdits.length > 0 ? (
@@ -1692,6 +1743,19 @@ const EditorPageFinal = () => {
               </div>
             )}
           </div>
+
+          {/* Terminal Panel - Inside Editor Column */}
+          {showTerminal && (
+            <WebContainerTerminal
+              projectId={projectId}
+              files={wcFiles}
+              onServerReady={handleServerReady}
+              onClose={() => setShowTerminal(false)}
+              defaultHeight={280}
+              minHeight={150}
+              maxHeight={500}
+            />
+          )}
         </div>
 
         {/* AI Chat Panel */}
@@ -1785,39 +1849,12 @@ const EditorPageFinal = () => {
         )}
         </div>
 
-        {/* Terminal Panel */}
-        {showTerminal && (
-          <div className="h-64 shrink-0 relative">
-            <WebContainerTerminal
-              projectId={projectId}
-              files={wcFiles}
-              onServerReady={handleServerReady}
-            />
-          </div>
-        )}
-
         {/* Preview Panel (when dev server is running) */}
         {showPreview && serverUrl && (
-          <div className="fixed bottom-0 right-0 w-96 h-96 bg-white shadow-2xl border-2 border-primary rounded-tl-lg z-50">
-            <div className="bg-gray-100 p-2 flex items-center justify-between border-b">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs font-medium">Preview</span>
-                <span className="text-xs text-gray-500">{serverUrl}</span>
-              </div>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="p-1 hover:bg-gray-200 rounded"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <iframe
-              src={serverUrl}
-              className="w-full h-[calc(100%-40px)]"
-              title="App Preview"
-            />
-          </div>
+          <PreviewPanel
+            url={serverUrl}
+            onClose={() => setShowPreview(false)}
+          />
         )}
       </div>
 

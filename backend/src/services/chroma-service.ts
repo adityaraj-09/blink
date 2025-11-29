@@ -43,7 +43,7 @@ export class ChromaService {
     // ChromaDB v3+ requires a running server
     // Default: http://localhost:8000
     const host = config?.host || 'localhost';
-    const port = config?.port || 8000;
+    const port = config?.port || 8001;
 
     this.client = new ChromaClient({
       path: `http://${host}:${port}`,

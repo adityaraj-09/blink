@@ -399,6 +399,47 @@ export class DatabaseSchema {
       CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(user_id);
     `);
 
+    // Local projects (opened from local filesystem, not GitHub)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS local_projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL UNIQUE,
+        user_id TEXT NOT NULL,
+        local_hash TEXT NOT NULL UNIQUE,
+        folder_name TEXT NOT NULL,
+        folder_path TEXT NOT NULL,
+        ingestion_status TEXT DEFAULT 'pending',
+        total_files INTEGER DEFAULT 0,
+        processed_files INTEGER DEFAULT 0,
+        total_chunks INTEGER DEFAULT 0,
+        error_message TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        last_ingested_at INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+      ) STRICT;
+    `);
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_local_projects_hash ON local_projects(local_hash);
+      CREATE INDEX IF NOT EXISTS idx_local_projects_user ON local_projects(user_id);
+      CREATE INDEX IF NOT EXISTS idx_local_projects_project ON local_projects(project_id);
+    `);
+
+    // Migration: Add merkle_json column to local_projects table if it doesn't exist
+    try {
+      const localProjectColumns = this.db.pragma(`table_info(local_projects)`) as any[];
+      const hasMerkleJson = localProjectColumns.some((col: any) => col.name === 'merkle_json');
+
+      if (!hasMerkleJson) {
+        console.log('Running migration: Adding merkle_json column to local_projects table');
+        this.db.exec(`ALTER TABLE local_projects ADD COLUMN merkle_json TEXT;`);
+        console.log('✓ Migration completed');
+      }
+    } catch (err) {
+      console.error('Local projects merkle_json migration error:', err);
+    }
+
     // Metadata
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS metadata (

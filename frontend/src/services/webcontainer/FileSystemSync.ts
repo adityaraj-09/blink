@@ -9,22 +9,41 @@ export class FileSystemSync {
   private syncInProgress = false;
 
   /**
-   * Convert project files to WebContainer mount format
+   * Convert project files to WebContainer mount format (nested directory structure)
    */
   static convertToWebContainerFormat(
     files: Array<{ path: string; content: string }>
-  ): { [path: string]: { file: { contents: string } } } {
-    const result: { [path: string]: { file: { contents: string } } } = {};
+  ): Record<string, any> {
+    const result: Record<string, any> = {};
 
     files.forEach(({ path, content }) => {
       // Normalize path (remove leading slash if present)
       const normalizedPath = path.startsWith('/') ? path.slice(1) : path;
+      const parts = normalizedPath.split('/');
 
-      result[normalizedPath] = {
-        file: {
-          contents: content,
-        },
-      };
+      // Navigate/create nested structure
+      let current = result;
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const isFile = i === parts.length - 1;
+
+        if (isFile) {
+          // Create file entry
+          current[part] = {
+            file: {
+              contents: content,
+            },
+          };
+        } else {
+          // Create/navigate directory
+          if (!current[part]) {
+            current[part] = {
+              directory: {},
+            };
+          }
+          current = current[part].directory;
+        }
+      }
     });
 
     return result;

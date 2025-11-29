@@ -29,6 +29,8 @@ Thumbs.db
 *.db-shm
 *.db-wal
 
+electron/
+
 # Test output
 coverage/
 
@@ -36,3 +38,5 @@ coverage/
 .indexerrc.local.json
 
 /chroma_data
+
+backend1/

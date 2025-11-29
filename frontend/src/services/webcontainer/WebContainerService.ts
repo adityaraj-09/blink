@@ -285,6 +285,55 @@ export class WebContainerService {
   }
 
   /**
+   * Reset file system for new project (clears all files without tearing down container)
+   */
+  async resetForNewProject(): Promise<void> {
+    if (!this.container) {
+      console.log('[WebContainer] Not booted, nothing to reset');
+      return;
+    }
+
+    console.log('[WebContainer] Resetting for new project...');
+
+    // Kill all running processes first
+    this.killAllProcesses();
+
+    try {
+      // Get all entries in root directory
+      const entries = await this.container.fs.readdir('/');
+
+      // Delete each entry (except system directories)
+      const systemDirs = ['home', 'tmp', 'proc', 'dev'];
+      for (const entry of entries) {
+        if (!systemDirs.includes(entry as string)) {
+          try {
+            await this.container.fs.rm(`/${entry}`, { recursive: true });
+            console.log(`[WebContainer] Removed: /${entry}`);
+          } catch (err) {
+            // Ignore errors for system files that can't be deleted
+            console.warn(`[WebContainer] Could not remove /${entry}:`, err);
+          }
+        }
+      }
+
+      // Clear /tmp contents
+      try {
+        const tmpEntries = await this.container.fs.readdir('/tmp');
+        for (const entry of tmpEntries) {
+          await this.container.fs.rm(`/tmp/${entry}`, { recursive: true });
+        }
+      } catch (err) {
+        // /tmp might not exist
+      }
+
+      console.log('[WebContainer] Reset complete');
+    } catch (error) {
+      console.error('[WebContainer] Reset error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Tear down WebContainer
    */
   async teardown(): Promise<void> {

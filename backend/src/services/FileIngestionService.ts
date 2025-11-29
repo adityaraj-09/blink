@@ -421,6 +421,64 @@ export class FileIngestionService {
   }
 
   /**
+   * Ingest a batch of files sent from the frontend
+   * This method processes files that are sent as content (not from local filesystem)
+   */
+  async ingestFileBatch(
+    projectId: string,
+    files: Array<{ path: string; content: string; size: number }>
+  ): Promise<{ chunksCreated: number; filesProcessed: number }> {
+    console.log(`📦 Ingesting batch of ${files.length} files for project ${projectId}`);
+
+    let chunksCreated = 0;
+    let filesProcessed = 0;
+
+    const chunkInputs: ChunkInput[] = [];
+
+    for (const file of files) {
+      try {
+        // Skip files that shouldn't be processed
+        if (!this.shouldProcessFile(file.path)) {
+          continue;
+        }
+
+        const fileHash = this.computeFileHash(file.content);
+        const language = this.detectLanguage(file.path);
+        const chunks = this.chunkFile(file.content, file.path);
+
+        if (chunks.length > 0) {
+          chunkInputs.push({
+            filePath: file.path,
+            fileHash,
+            language,
+            chunks,
+          });
+
+          chunksCreated += chunks.length;
+        }
+
+        filesProcessed++;
+      } catch (error: any) {
+        console.error(`❌ Failed to process file ${file.path}:`, error.message);
+        // Continue with next file
+      }
+    }
+
+    // Ingest all chunks to vector store
+    if (chunkInputs.length > 0) {
+      try {
+        await this.codeIngestion.ingestChunks(projectId, chunkInputs);
+        console.log(`✅ Ingested ${chunkInputs.length} files, ${chunksCreated} chunks`);
+      } catch (error: any) {
+        console.error(`❌ Failed to ingest chunks:`, error.message);
+        throw error;
+      }
+    }
+
+    return { chunksCreated, filesProcessed };
+  }
+
+  /**
    * Cleanup cloned repository folder
    */
   private async cleanupClonedRepo(localPath: string): Promise<void> {
