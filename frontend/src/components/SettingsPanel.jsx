@@ -11,18 +11,18 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0e1a] border-l border-[#1e293b]">
+    <div className="flex flex-col h-full bg-[#161b22] border-l border-[#30363d]">
       {/* Header */}
-      <div className="p-4 border-b border-[#1e293b] flex items-center justify-between bg-[#0a0e1a]">
+      <div className="p-4 border-b border-[#30363d] flex items-center justify-between bg-[#161b22]">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 bg-blue-600/10 rounded-lg">
-            <Monitor size={18} className="text-blue-400" />
+          <div className="p-1.5 bg-emerald-600/10 rounded-lg">
+            <Monitor size={18} className="text-emerald-400" />
           </div>
           <h2 className="text-lg font-semibold text-gray-100 font-['ClashDisplay-Variable']">Settings</h2>
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-[#1e293b] rounded-lg transition-all hover:scale-110 text-gray-400 hover:text-gray-200"
+          className="p-2 hover:bg-[#30363d] rounded-lg transition-all hover:scale-110 text-gray-400 hover:text-gray-200"
         >
           <X size={16} />
         </button>
@@ -31,10 +31,10 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
       {/* Settings Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Editor Settings */}
-        <div className="bg-[#020617] border border-[#1e293b] rounded-lg p-4">
+        <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-4">
           <h3 className="text-base font-semibold text-gray-200 mb-4 flex items-center gap-2 font-['DM_Sans']">
-            <div className="p-1.5 bg-blue-600/10 rounded-lg">
-              <Code size={16} className="text-blue-400" />
+            <div className="p-1.5 bg-emerald-600/10 rounded-lg">
+              <Code size={16} className="text-emerald-400" />
             </div>
             Editor
           </h3>
@@ -43,7 +43,7 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
             {/* Font Size */}
             <div>
               <label className="block text-sm text-gray-300 mb-2 font-['DM_Sans']">
-                Font Size: <span className="text-blue-400 font-medium">{localSettings.fontSize}px</span>
+                Font Size: <span className="text-emerald-400 font-medium">{localSettings.fontSize}px</span>
               </label>
               <input
                 type="range"
@@ -51,7 +51,7 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
                 max="24"
                 value={localSettings.fontSize}
                 onChange={(e) => handleChange('fontSize', parseInt(e.target.value))}
-                className="w-full accent-blue-600"
+                className="w-full accent-emerald-600"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1 font-['DM_Sans']">
                 <span>10px</span>
@@ -69,8 +69,8 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
                     onClick={() => handleChange('tabSize', size)}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm transition-all font-['DM_Sans'] font-medium ${
                       localSettings.tabSize === size
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                        : 'bg-[#1e293b] text-gray-400 hover:bg-[#334155]'
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
+                        : 'bg-[#30363d] text-gray-400 hover:bg-[#484f58]'
                     }`}
                   >
                     {size}
@@ -85,7 +85,7 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
               <button
                 onClick={() => handleChange('wordWrap', !localSettings.wordWrap)}
                 className={`relative inline-block w-12 h-6 rounded-full transition-all ${
-                  localSettings.wordWrap ? 'bg-blue-600 shadow-lg shadow-blue-600/25' : 'bg-[#1e293b]'
+                  localSettings.wordWrap ? 'bg-emerald-600 shadow-lg shadow-emerald-600/25' : 'bg-[#30363d]'
                 }`}
               >
                 <span
@@ -102,7 +102,7 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
               <button
                 onClick={() => handleChange('minimap', !localSettings.minimap)}
                 className={`relative inline-block w-12 h-6 rounded-full transition-all ${
-                  localSettings.minimap ? 'bg-blue-600 shadow-lg shadow-blue-600/25' : 'bg-[#1e293b]'
+                  localSettings.minimap ? 'bg-emerald-600 shadow-lg shadow-emerald-600/25' : 'bg-[#30363d]'
                 }`}
               >
                 <span
@@ -119,7 +119,7 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
               <button
                 onClick={() => handleChange('autoSave', !localSettings.autoSave)}
                 className={`relative inline-block w-12 h-6 rounded-full transition-all ${
-                  localSettings.autoSave ? 'bg-blue-600 shadow-lg shadow-blue-600/25' : 'bg-[#1e293b]'
+                  localSettings.autoSave ? 'bg-emerald-600 shadow-lg shadow-emerald-600/25' : 'bg-[#30363d]'
                 }`}
               >
                 <span
@@ -133,10 +133,10 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
         </div>
 
         {/* Appearance */}
-        <div className="bg-[#020617] border border-[#1e293b] rounded-lg p-4">
+        <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-4">
           <h3 className="text-base font-semibold text-gray-200 mb-4 flex items-center gap-2 font-['DM_Sans']">
-            <div className="p-1.5 bg-purple-600/10 rounded-lg">
-              <Monitor size={16} className="text-purple-400" />
+            <div className="p-1.5 bg-emerald-600/10 rounded-lg">
+              <Monitor size={16} className="text-emerald-400" />
             </div>
             Appearance
           </h3>
@@ -156,8 +156,8 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
                     onClick={() => handleChange('theme', value)}
                     className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all font-['DM_Sans'] ${
                       localSettings.theme === value
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25'
-                        : 'bg-[#1e293b] text-gray-400 hover:bg-[#334155]'
+                        ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25'
+                        : 'bg-[#30363d] text-gray-400 hover:bg-[#484f58]'
                     }`}
                   >
                     <Icon size={20} />
@@ -170,7 +170,7 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
             {/* Line Height */}
             <div>
               <label className="block text-sm text-gray-300 mb-2 font-['DM_Sans']">
-                Line Height: <span className="text-purple-400 font-medium">{localSettings.lineHeight}</span>
+                Line Height: <span className="text-emerald-400 font-medium">{localSettings.lineHeight}</span>
               </label>
               <input
                 type="range"
@@ -179,14 +179,14 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
                 step="0.1"
                 value={localSettings.lineHeight}
                 onChange={(e) => handleChange('lineHeight', parseFloat(e.target.value))}
-                className="w-full accent-purple-600"
+                className="w-full accent-emerald-600"
               />
             </div>
           </div>
         </div>
 
         {/* Keyboard Shortcuts */}
-        <div className="bg-[#020617] border border-[#1e293b] rounded-lg p-4">
+        <div className="bg-[#0d1117] border border-[#30363d] rounded-lg p-4">
           <h3 className="text-base font-semibold text-gray-200 mb-4 flex items-center gap-2 font-['DM_Sans']">
             <div className="p-1.5 bg-green-600/10 rounded-lg">
               <Type size={16} className="text-green-400" />
@@ -195,40 +195,40 @@ const SettingsPanel = ({ onClose, settings, onSettingsChange }) => {
           </h3>
 
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">Search Files</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">Ctrl+P</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">Ctrl+P</kbd>
             </div>
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">Save File</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">Cmd+S</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">Cmd+S</kbd>
             </div>
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">AI Inline Edit</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">Cmd+K</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">Cmd+K</kbd>
             </div>
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">AI Assistant</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">Ctrl+I</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">Ctrl+I</kbd>
             </div>
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">Git Panel</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">Ctrl+G</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">Ctrl+G</kbd>
             </div>
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">Terminal</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">Ctrl+`</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">Ctrl+`</kbd>
             </div>
-            <div className="flex justify-between items-center p-3 bg-[#1e293b] rounded-lg hover:bg-[#334155] transition-all">
+            <div className="flex justify-between items-center p-3 bg-[#30363d] rounded-lg hover:bg-[#484f58] transition-all">
               <span className="text-gray-300 font-['DM_Sans']">Fullscreen</span>
-              <kbd className="px-2.5 py-1 bg-[#020617] border border-[#334155] rounded text-xs text-blue-400 font-['DM_Sans'] font-medium">F11</kbd>
+              <kbd className="px-2.5 py-1 bg-[#0d1117] border border-[#484f58] rounded text-xs text-emerald-400 font-['DM_Sans'] font-medium">F11</kbd>
             </div>
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-[#1e293b] text-center">
+      <div className="p-4 border-t border-[#30363d] text-center">
         <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-['DM_Sans']">
           <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

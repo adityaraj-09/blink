@@ -14,11 +14,16 @@ import {
   AlertCircle,
   Github,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
+  Package,
+  Check
 } from 'lucide-react';
 import { useAPIAuth } from '../hooks/useAPI';
 import { getProject, getProjectFiles, deleteProject } from '../api/projects';
+import { getFileContent } from '../api/files';
 import { getFileIcon } from '../utils/fileIcons';
+import JSZip from 'jszip';
 
 const ProjectDetailPage = () => {
   const { id } = useParams();
@@ -37,6 +42,11 @@ const ProjectDetailPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Download state
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadComplete, setDownloadComplete] = useState(false);
 
   // Inject auth token into API client
   useAPIAuth();
@@ -125,13 +135,73 @@ const ProjectDetailPage = () => {
     }
   };
 
+  const handleDownloadAllFiles = async () => {
+    if (files.length === 0) {
+      alert('No files to download');
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      setDownloadProgress(0);
+      setDownloadComplete(false);
+
+      const zip = new JSZip();
+      const totalFiles = files.length;
+      let processedFiles = 0;
+
+      // Fetch all file contents in batches to avoid overwhelming the server
+      const batchSize = 5;
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+
+        await Promise.all(
+          batch.map(async (file) => {
+            try {
+              const fileData = await getFileContent(id, file.filePath);
+              zip.file(file.filePath, fileData.content);
+            } catch (err) {
+              console.warn(`Failed to fetch file ${file.filePath}:`, err);
+              // Add empty placeholder for failed files
+              zip.file(file.filePath, `// Failed to fetch: ${err.message}`);
+            }
+            processedFiles++;
+            setDownloadProgress(Math.round((processedFiles / totalFiles) * 100));
+          })
+        );
+      }
+
+      // Generate and download the zip file
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${project.projectName.replace(/[^a-z0-9]/gi, '_')}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setDownloadComplete(true);
+      setTimeout(() => {
+        setDownloadComplete(false);
+      }, 3000);
+    } catch (err) {
+      console.error('Failed to download files:', err);
+      alert(`Failed to download files: ${err.message}`);
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(0);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center space-y-4">
-            <Loader2 className="w-12 h-12 text-primary animate-spin" />
-            <p className="text-gray-600">Loading project...</p>
+            <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
+            <p className="text-gray-400">Loading project...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -143,7 +213,7 @@ const ProjectDetailPage = () => {
       <DashboardLayout>
         <Link
           to="/dashboard/projects"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6 text-sm"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors mb-6 text-sm"
         >
           <ArrowLeft size={16} />
           <span>Back to Projects</span>
@@ -151,11 +221,11 @@ const ProjectDetailPage = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center space-y-4 text-center">
             <AlertCircle className="w-12 h-12 text-red-500" />
-            <p className="text-gray-800 font-semibold">Failed to load project</p>
-            <p className="text-gray-600 text-sm">{error}</p>
+            <p className="text-white font-semibold">Failed to load project</p>
+            <p className="text-gray-400 text-sm">{error}</p>
             <button
               onClick={loadProjectData}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 transition-colors"
             >
               Try Again
             </button>
@@ -174,38 +244,38 @@ const ProjectDetailPage = () => {
       {/* Back Button */}
       <Link
         to="/dashboard/projects"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-6 text-sm"
+        className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-200 transition-colors mb-6 text-sm"
       >
         <ArrowLeft size={16} />
         <span>Back to Projects</span>
       </Link>
 
       {/* Project Header */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6 shadow-sm">
+      <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-6 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-start gap-4 mb-4">
-              <div className="p-3 bg-gray-100 rounded-xl">
-                <Code2 className="text-gray-700" size={24} />
+              <div className="p-3 bg-[#21262d] rounded-xl border border-[#30363d]">
+                <Code2 className="text-emerald-400" size={24} />
               </div>
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">{project.projectName}</h1>
+                <h1 className="text-2xl font-bold text-white mb-2">{project.projectName}</h1>
                 <div className="flex items-center gap-2">
                   {project.lastIndexedAt && (
-                    <span className="inline-block px-2.5 py-1 text-xs border rounded-full bg-green-50 text-green-700 border-green-200">
+                    <span className="inline-block px-2.5 py-1 text-xs rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                       indexed
                     </span>
                   )}
                   {project.repositoryUrl && (
-                    <span className="text-xs text-gray-500">{project.repositoryUrl}</span>
+                    <span className="text-xs text-gray-500 truncate">{project.repositoryUrl}</span>
                   )}
                 </div>
               </div>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4">{project.description || 'No description provided'}</p>
+            <p className="text-sm text-gray-400 mb-4">{project.description || 'No description provided'}</p>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
               <div className="flex items-center gap-1.5">
                 <Folder size={14} />
                 <span>{project.totalFiles} files</span>
@@ -232,21 +302,47 @@ const ProjectDetailPage = () => {
                 }));
                 navigate('/editor');
               }}
-              className="flex items-center justify-center gap-2 bg-[#365eff] hover:bg-[#2d4ed8] text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+              className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg transition-colors font-medium text-sm"
             >
               <Code2 size={16} />
               Open in Editor
             </button>
-            <button className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors font-medium text-sm">
+            <button className="flex items-center justify-center gap-2 bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] text-gray-300 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm">
               <Share2 size={16} />
               Share
+            </button>
+            <button
+              onClick={handleDownloadAllFiles}
+              disabled={isDownloading || files.length === 0}
+              className="flex items-center justify-center gap-2 bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] text-gray-300 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>{downloadProgress}%</span>
+                  <div
+                    className="absolute bottom-0 left-0 h-0.5 bg-emerald-400 transition-all duration-300"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                </>
+              ) : downloadComplete ? (
+                <>
+                  <Check size={16} className="text-emerald-400" />
+                  <span className="text-emerald-400">Downloaded</span>
+                </>
+              ) : (
+                <>
+                  <Package size={16} />
+                  Download ZIP
+                </>
+              )}
             </button>
             {project.repositoryUrl && (
               <a
                 href={project.repositoryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                className="flex items-center justify-center gap-2 bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] text-gray-300 px-4 py-2.5 rounded-lg transition-colors font-medium text-sm"
               >
                 <Github size={16} />
                 View on GitHub
@@ -257,16 +353,16 @@ const ProjectDetailPage = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border border-gray-200 rounded-xl mb-6 shadow-sm">
-        <div className="flex overflow-x-auto border-b border-gray-200">
+      <div className="bg-[#161b22] border border-[#30363d] rounded-xl mb-6">
+        <div className="flex overflow-x-auto border-b border-[#30363d]">
           {['overview', 'files'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-5 py-3 font-medium capitalize transition-colors text-sm whitespace-nowrap ${
                 activeTab === tab
-                  ? 'text-[#365eff] border-b-2 border-[#365eff]'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'text-emerald-400 border-b-2 border-emerald-400'
+                  : 'text-gray-400 hover:text-gray-200'
               }`}
             >
               {tab}
@@ -279,49 +375,49 @@ const ProjectDetailPage = () => {
           {activeTab === 'overview' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-base font-bold text-gray-900 mb-4">Project Info</h3>
+                <h3 className="text-base font-bold text-white mb-4">Project Info</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Created</span>
-                    <span className="text-sm font-medium text-gray-900">{formatDate(project.createdAt)}</span>
+                  <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                    <span className="text-sm text-gray-400">Created</span>
+                    <span className="text-sm font-medium text-gray-200">{formatDate(project.createdAt)}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Last Updated</span>
-                    <span className="text-sm font-medium text-gray-900">{formatTimeAgo(project.updatedAt)}</span>
+                  <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                    <span className="text-sm text-gray-400">Last Updated</span>
+                    <span className="text-sm font-medium text-gray-200">{formatTimeAgo(project.updatedAt)}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Total Files</span>
-                    <span className="text-sm font-medium text-gray-900">{project.totalFiles}</span>
+                  <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                    <span className="text-sm text-gray-400">Total Files</span>
+                    <span className="text-sm font-medium text-gray-200">{project.totalFiles}</span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm text-gray-600">Chunks Indexed</span>
-                    <span className="text-sm font-medium text-gray-900">{project.totalChunks}</span>
+                  <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                    <span className="text-sm text-gray-400">Chunks Indexed</span>
+                    <span className="text-sm font-medium text-gray-200">{project.totalChunks}</span>
                   </div>
                   {project.lastIndexedAt && (
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-600">Last Indexed</span>
-                      <span className="text-sm font-medium text-gray-900">{formatDate(project.lastIndexedAt)}</span>
+                    <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                      <span className="text-sm text-gray-400">Last Indexed</span>
+                      <span className="text-sm font-medium text-gray-200">{formatDate(project.lastIndexedAt)}</span>
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-base font-bold text-gray-900 mb-4">Vector Store Info</h3>
+                <h3 className="text-base font-bold text-white mb-4">Vector Store Info</h3>
                 {project.vectorStore ? (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-600">Collection Name</span>
-                      <span className="text-sm font-medium text-gray-900">{project.vectorStore.name}</span>
+                    <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                      <span className="text-sm text-gray-400">Collection Name</span>
+                      <span className="text-sm font-medium text-gray-200">{project.vectorStore.name}</span>
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm text-gray-600">Document Count</span>
-                      <span className="text-sm font-medium text-gray-900">{project.vectorStore.count}</span>
+                    <div className="flex items-center justify-between p-3 bg-[#0d1117] rounded-lg border border-[#30363d]">
+                      <span className="text-sm text-gray-400">Document Count</span>
+                      <span className="text-sm font-medium text-gray-200">{project.vectorStore.count}</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-6 bg-gray-50 rounded-lg text-center">
-                    <p className="text-sm text-gray-600">Vector store not initialized</p>
+                  <div className="p-6 bg-[#0d1117] rounded-lg border border-[#30363d] text-center">
+                    <p className="text-sm text-gray-500">Vector store not initialized</p>
                   </div>
                 )}
               </div>
@@ -333,9 +429,11 @@ const ProjectDetailPage = () => {
             <div className="space-y-2">
               {files.length === 0 ? (
                 <div className="p-12 text-center">
-                  <Folder className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No files yet</h3>
-                  <p className="text-sm text-gray-600">Files will appear here after ingestion</p>
+                  <div className="w-16 h-16 bg-[#21262d] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Folder className="w-8 h-8 text-gray-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">No files yet</h3>
+                  <p className="text-sm text-gray-500">Files will appear here after ingestion</p>
                 </div>
               ) : (
                 files.map((file) => {
@@ -349,7 +447,7 @@ const ProjectDetailPage = () => {
                         setSelectedFile(file);
                         setShowPreviewModal(true);
                       }}
-                      className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                      className="flex items-center justify-between p-4 bg-[#0d1117] rounded-lg border border-[#30363d] hover:bg-[#21262d] hover:border-[#484f58] transition-colors cursor-pointer group"
                     >
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         {isString ? (
@@ -358,11 +456,13 @@ const ProjectDetailPage = () => {
                           React.createElement(fileIcon, { className: "text-gray-500 flex-shrink-0", size: 18 })
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-gray-900 truncate">{file.filePath}</p>
-
+                          <p className="font-medium text-sm text-gray-200 group-hover:text-emerald-400 truncate transition-colors">{file.filePath}</p>
                         </div>
                       </div>
-                      <span className="text-xs text-gray-500">{formatDate(file.indexedAt)}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">{formatDate(file.indexedAt)}</span>
+                        <ExternalLink size={14} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   );
                 })
@@ -373,20 +473,20 @@ const ProjectDetailPage = () => {
       </div>
 
       {/* Delete Project Section */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Delete Project</h2>
-        <p className="text-sm text-gray-600 mb-6">
+      <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
+        <h2 className="text-xl font-bold text-white mb-2">Delete Project</h2>
+        <p className="text-sm text-gray-400 mb-6">
           Permanently delete this project and all files, chunks, embeddings, and settings.
         </p>
 
         {/* Project Info Card */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 inline-block">
+        <div className="bg-[#161b22] border border-[#30363d] rounded-lg p-4 mb-6 inline-block">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded">
-              <Code2 size={20} className="text-gray-700" />
+            <div className="p-2 bg-[#21262d] rounded-lg border border-[#30363d]">
+              <Code2 size={20} className="text-gray-400" />
             </div>
             <div>
-              <p className="font-semibold text-gray-900">{project.projectName}</p>
+              <p className="font-semibold text-gray-200">{project.projectName}</p>
               <p className="text-xs text-gray-500">Last updated {formatDate(project.updatedAt)}</p>
             </div>
           </div>
@@ -396,7 +496,7 @@ const ProjectDetailPage = () => {
         <div className="flex justify-end">
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg transition-colors font-medium"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-6 py-2.5 rounded-lg transition-colors font-medium"
           >
             <Trash2 size={16} />
             Delete Project
@@ -406,25 +506,25 @@ const ProjectDetailPage = () => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-md shadow-2xl shadow-black/50">
             {/* Modal Header */}
-            <div className="flex items-center gap-3 p-6 border-b border-gray-200">
-              <div className="p-2 bg-red-100 rounded-full">
-                <AlertTriangle className="text-red-600" size={24} />
+            <div className="flex items-center gap-3 p-6 border-b border-[#30363d]">
+              <div className="p-2 bg-red-500/10 rounded-full border border-red-500/20">
+                <AlertTriangle className="text-red-500" size={24} />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Delete Project</h3>
-                <p className="text-sm text-gray-600">This action cannot be undone</p>
+                <h3 className="text-lg font-bold text-white">Delete Project</h3>
+                <p className="text-sm text-gray-400">This action cannot be undone</p>
               </div>
             </div>
 
             {/* Modal Body */}
             <div className="p-6">
-              <p className="text-sm text-gray-600 mb-4">
-                This will permanently delete <strong>{project.projectName}</strong> and all of its data including:
+              <p className="text-sm text-gray-400 mb-4">
+                This will permanently delete <strong className="text-white">{project.projectName}</strong> and all of its data including:
               </p>
-              <ul className="text-sm text-gray-600 space-y-2 mb-6 list-disc list-inside">
+              <ul className="text-sm text-gray-400 space-y-2 mb-6 list-disc list-inside">
                 <li>{project.totalFiles} files</li>
                 <li>{project.totalChunks} code chunks</li>
                 <li>All embeddings in vector database</li>
@@ -432,28 +532,28 @@ const ProjectDetailPage = () => {
               </ul>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  To confirm, type <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">{project.projectName}</span> below:
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  To confirm, type <span className="font-mono bg-[#21262d] px-1.5 py-0.5 rounded text-red-400">{project.projectName}</span> below:
                 </label>
                 <input
                   type="text"
                   value={deleteConfirmText}
                   onChange={(e) => setDeleteConfirmText(e.target.value)}
                   placeholder={project.projectName}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  className="w-full px-3 py-2.5 bg-[#0d1117] border border-[#30363d] rounded-lg focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all text-gray-100 placeholder-gray-600"
                   disabled={isDeleting}
                 />
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="flex gap-3 p-6 border-t border-gray-200">
+            <div className="flex gap-3 p-6 border-t border-[#30363d] bg-[#0d1117]">
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setDeleteConfirmText('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex-1 px-4 py-2.5 bg-[#21262d] border border-[#30363d] text-gray-300 rounded-lg hover:bg-[#30363d] transition-colors font-medium"
                 disabled={isDeleting}
               >
                 Cancel
@@ -461,7 +561,7 @@ const ProjectDetailPage = () => {
               <button
                 onClick={handleDeleteProject}
                 disabled={deleteConfirmText !== project.projectName || isDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isDeleting ? (
                   <>

@@ -147,8 +147,8 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
     return (
       <div className="flex items-center justify-center h-full p-8 text-center">
         <div>
-          <div className="w-16 h-16 bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Loader size={32} className="text-purple-400" />
+          <div className="w-16 h-16 bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Loader size={32} className="text-emerald-400" />
           </div>
           <h3 className="font-semibold mb-2">Progressive Execution</h3>
           <p className="text-sm text-gray-400 max-w-xs">
@@ -176,7 +176,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
       case 'failed':
         return <AlertCircle size={14} className="text-red-400 flex-shrink-0" />;
       case 'processing':
-        return <Loader size={14} className="text-blue-400 animate-spin flex-shrink-0" />;
+        return <Loader size={14} className="text-emerald-400 animate-spin flex-shrink-0" />;
       default:
         return <Circle size={14} className="text-gray-500 flex-shrink-0" />;
     }
@@ -189,7 +189,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
       case 'failed':
         return 'text-red-400';
       case 'processing':
-        return 'text-blue-400';
+        return 'text-emerald-400';
       case 'planning':
         return 'text-yellow-400';
       default:
@@ -210,7 +210,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
     <div className="flex flex-col h-full">
       {/* Status Header */}
       {taskStatus && (
-        <div className="p-3 border-b border-[#2d2d2d] bg-[#252525]">
+        <div className="p-3 border-b border-[#30363d] bg-[#161b22]">
           {/* Polling Error Warning (non-blocking) */}
           {error && isRunning && (
             <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded text-xs text-yellow-300 flex items-center gap-2">
@@ -244,7 +244,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
                 className={`h-full transition-all duration-300 ${
                   taskStatus.status === 'failed'
                     ? 'bg-gradient-to-r from-red-500 to-red-600'
-                    : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-500'
                 }`}
                 style={{ width: `${taskStatus.progress.percentage}%` }}
               />
@@ -254,7 +254,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
           {/* Plan Explanation - Scrollable */}
           {taskStatus.explanation && (
             <div className="p-2 bg-blue-900/20 border border-blue-500/30 rounded text-xs text-gray-300 max-h-20 overflow-y-auto">
-              <strong className="text-blue-300">Plan:</strong> {taskStatus.explanation}
+              <strong className="text-emerald-300">Plan:</strong> {taskStatus.explanation}
             </div>
           )}
 
@@ -346,8 +346,8 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
                         : isFailed
                         ? 'bg-red-900/5 border-red-500/20'
                         : isActive
-                        ? 'bg-blue-900/5 border-blue-500/30 ring-1 ring-blue-500/20'
-                        : 'bg-[#252525] border-gray-700'
+                        ? 'bg-emerald-900/5 border-emerald-500/30 ring-1 ring-emerald-500/20'
+                        : 'bg-[#161b22] border-gray-700'
                     }`}
                   >
                     {/* TODO Header - Always Visible */}
@@ -363,7 +363,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
                         {todo.title}
                       </span>
                       {isActive && (
-                        <Loader size={12} className="animate-spin text-blue-400 flex-shrink-0" />
+                        <Loader size={12} className="animate-spin text-emerald-400 flex-shrink-0" />
                       )}
                       {isExpanded ? (
                         <ChevronDown size={14} className="text-gray-500 flex-shrink-0" />
@@ -388,7 +388,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
                               <div key={editIndex} className="border-l-2 border-gray-600 pl-2">
                                 <div className="flex items-center justify-between mb-1">
                                   <span className="text-xs text-gray-400">
-                                    {editIndex + 1}. <span className="text-blue-300">{edit.action}</span> in <span className="text-gray-300">{edit.file}</span>
+                                    {editIndex + 1}. <span className="text-emerald-300">{edit.action}</span> in <span className="text-gray-300">{edit.file}</span>
                                   </span>
                                   {edit.newCode && (
                                     <button
@@ -455,7 +455,7 @@ const ProgressiveEditView = ({ taskStatus, isRunning, error, onCancel, projectId
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <Loader size={24} className="animate-spin text-purple-400 mx-auto mb-2" />
+              <Loader size={24} className="animate-spin text-emerald-400 mx-auto mb-2" />
               <p className="text-sm text-gray-400">Planning steps...</p>
             </div>
           </div>

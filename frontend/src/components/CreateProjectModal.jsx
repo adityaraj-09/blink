@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { X, Folder, AlertCircle, CheckCircle } from 'lucide-react';
+import { X, Folder, AlertCircle, CheckCircle, Loader2, Sparkles } from 'lucide-react';
 import { createProject } from '../api/projects';
 
 const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
@@ -97,24 +97,24 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white border border-gray-200 rounded-xl w-full max-w-lg shadow-2xl">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-lg shadow-2xl shadow-black/50">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
+        <div className="flex items-center justify-between p-5 border-b border-[#30363d]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <Folder size={20} className="text-[#365eff]" />
+            <div className="p-2.5 bg-purple-500/10 rounded-lg border border-purple-500/20">
+              <Folder size={20} className="text-purple-400" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Create New Project</h2>
-              <p className="text-xs text-gray-600">Start a new project from scratch</p>
+              <h2 className="text-base font-semibold text-white">Create New Project</h2>
+              <p className="text-xs text-gray-400">Start a new project from scratch</p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-[#21262d] rounded-lg transition-colors border border-transparent hover:border-[#30363d]"
           >
-            <X size={18} className="text-gray-600" />
+            <X size={18} className="text-gray-400" />
           </button>
         </div>
 
@@ -122,19 +122,19 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
         <div className="p-5 space-y-4">
           {/* Error Message */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-              <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-3">
+              <AlertCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm text-red-800 font-medium">Error</p>
-                <p className="text-xs text-red-700 mt-0.5">{error}</p>
+                <p className="text-sm text-red-400 font-medium">Error</p>
+                <p className="text-xs text-red-400/80 mt-0.5">{error}</p>
               </div>
             </div>
           )}
 
           {/* Project Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project Name <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Project Name <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -146,13 +146,13 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
                 }
               }}
               placeholder="Enter project name"
-              className={`w-full px-3 py-2.5 bg-white border ${
-                validationErrors.projectName ? 'border-red-300' : 'border-gray-200'
-              } rounded-lg text-sm focus:outline-none focus:border-[#365eff] focus:ring-1 focus:ring-[#365eff] transition-all text-gray-900`}
+              className={`w-full px-3 py-2.5 bg-[#0d1117] border ${
+                validationErrors.projectName ? 'border-red-500/50' : 'border-[#30363d]'
+              } rounded-lg text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all text-gray-100 placeholder-gray-500`}
               disabled={creating}
             />
             {validationErrors.projectName && (
-              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+              <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
                 <AlertCircle size={12} />
                 {validationErrors.projectName}
               </p>
@@ -161,8 +161,8 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description <span className="text-gray-400 text-xs font-normal">(optional)</span>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Description <span className="text-gray-500 text-xs font-normal">(optional)</span>
             </label>
             <textarea
               value={description}
@@ -174,14 +174,14 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
               }}
               placeholder="Enter project description"
               rows={3}
-              className={`w-full px-3 py-2.5 bg-white border ${
-                validationErrors.description ? 'border-red-300' : 'border-gray-200'
-              } rounded-lg text-sm focus:outline-none focus:border-[#365eff] focus:ring-1 focus:ring-[#365eff] transition-all text-gray-900 resize-none`}
+              className={`w-full px-3 py-2.5 bg-[#0d1117] border ${
+                validationErrors.description ? 'border-red-500/50' : 'border-[#30363d]'
+              } rounded-lg text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all text-gray-100 placeholder-gray-500 resize-none`}
               disabled={creating}
             />
-            <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center justify-between mt-2">
               {validationErrors.description ? (
-                <p className="text-xs text-red-600 flex items-center gap-1">
+                <p className="text-xs text-red-400 flex items-center gap-1">
                   <AlertCircle size={12} />
                   {validationErrors.description}
                 </p>
@@ -190,7 +190,7 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
                   Describe what this project is about
                 </p>
               )}
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-500">
                 {description.length}/500
               </p>
             </div>
@@ -198,8 +198,8 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
 
           {/* Repository URL */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Repository URL <span className="text-gray-400 text-xs font-normal">(optional)</span>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Repository URL <span className="text-gray-500 text-xs font-normal">(optional)</span>
             </label>
             <input
               type="url"
@@ -211,32 +211,34 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
                 }
               }}
               placeholder="https://github.com/username/repo"
-              className={`w-full px-3 py-2.5 bg-white border ${
-                validationErrors.repositoryUrl ? 'border-red-300' : 'border-gray-200'
-              } rounded-lg text-sm focus:outline-none focus:border-[#365eff] focus:ring-1 focus:ring-[#365eff] transition-all text-gray-900`}
+              className={`w-full px-3 py-2.5 bg-[#0d1117] border ${
+                validationErrors.repositoryUrl ? 'border-red-500/50' : 'border-[#30363d]'
+              } rounded-lg text-sm focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all text-gray-100 placeholder-gray-500`}
               disabled={creating}
             />
             {validationErrors.repositoryUrl ? (
-              <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+              <p className="mt-2 text-xs text-red-400 flex items-center gap-1">
                 <AlertCircle size={12} />
                 {validationErrors.repositoryUrl}
               </p>
             ) : (
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-500">
                 Link to your repository (GitHub, GitLab, etc.)
               </p>
             )}
           </div>
 
           {/* Info Box */}
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-start gap-2">
-              <CheckCircle size={16} className="text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="p-4 bg-purple-500/5 border border-purple-500/20 rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="p-1.5 bg-purple-500/10 rounded-lg">
+                <Sparkles size={14} className="text-purple-400" />
+              </div>
               <div className="flex-1">
-                <p className="text-xs text-blue-900 font-medium">
+                <p className="text-sm text-purple-300 font-medium">
                   What happens next?
                 </p>
-                <p className="text-xs text-blue-800 mt-1">
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
                   Your project will be created and you can start adding files, managing code, and using AI features.
                 </p>
               </div>
@@ -245,23 +247,23 @@ const CreateProjectModal = ({ isOpen, onClose, onCreateSuccess }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-gray-200 bg-gray-50">
+        <div className="p-5 border-t border-[#30363d] bg-[#0d1117]">
           <div className="flex items-center gap-3">
             <button
               onClick={handleClose}
               disabled={creating}
-              className="flex-1 px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed rounded-lg font-medium transition-colors text-gray-700 text-sm"
+              className="flex-1 px-4 py-2.5 bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] disabled:bg-[#161b22] disabled:text-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors text-gray-300 text-sm"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={creating || !projectName.trim()}
-              className="flex-1 px-4 py-2.5 bg-[#365eff] hover:bg-[#2d4ed8] disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-white text-sm"
+              className="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-white text-sm"
             >
               {creating ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   Creating...
                 </>
               ) : (

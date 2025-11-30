@@ -136,14 +136,14 @@ const GitPanel = ({ projectId, onClose }) => {
         return <Minus size={14} className="text-red-400" />;
       case 'modified':
       default:
-        return <File size={14} className="text-blue-400" />;
+        return <File size={14} className="text-emerald-400" />;
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#181818] border-l border-[#2d2d2d]">
+    <div className="flex flex-col h-full bg-[#161b22] border-l border-[#30363d]">
       {/* Header */}
-      <div className="p-4 border-b border-[#2d2d2d] flex items-center justify-between">
+      <div className="p-4 border-b border-[#30363d] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <GitBranch size={20} />
           <h2 className="text-lg font-semibold">Git</h2>
@@ -166,12 +166,12 @@ const GitPanel = ({ projectId, onClose }) => {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-[#2d2d2d]">
+      <div className="flex border-b border-[#30363d]">
         <button
           onClick={() => setActiveTab('changes')}
           className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'changes'
-              ? 'text-blue-400 border-b-2 border-blue-400'
+              ? 'text-emerald-400 border-b-2 border-emerald-400'
               : 'text-gray-400 hover:text-gray-200'
           }`}
         >
@@ -181,7 +181,7 @@ const GitPanel = ({ projectId, onClose }) => {
           onClick={() => setActiveTab('history')}
           className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === 'history'
-              ? 'text-blue-400 border-b-2 border-blue-400'
+              ? 'text-emerald-400 border-b-2 border-emerald-400'
               : 'text-gray-400 hover:text-gray-200'
           }`}
         >
@@ -204,7 +204,7 @@ const GitPanel = ({ projectId, onClose }) => {
                     <h3 className="text-sm font-semibold text-gray-300">Commit Message</h3>
                     <button
                       onClick={handleStageAll}
-                      className="text-xs text-blue-400 hover:text-blue-300"
+                      className="text-xs text-emerald-400 hover:text-emerald-300"
                     >
                       Stage All
                     </button>
@@ -213,7 +213,7 @@ const GitPanel = ({ projectId, onClose }) => {
                     value={commitMessage}
                     onChange={(e) => setCommitMessage(e.target.value)}
                     placeholder="Enter commit message..."
-                    className="w-full bg-[#0e0e0e] border border-gray-700 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0d1117] border border-gray-700 rounded px-3 py-2 text-sm resize-none focus:outline-none focus:border-emerald-500"
                     rows={3}
                   />
                   <div className="flex gap-2">
@@ -237,7 +237,7 @@ const GitPanel = ({ projectId, onClose }) => {
                     <button
                       onClick={handlePush}
                       disabled={pushing}
-                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                      className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm font-medium transition-colors"
                     >
                       {pushing ? (
                         <Loader2 size={14} className="animate-spin" />
@@ -259,7 +259,7 @@ const GitPanel = ({ projectId, onClose }) => {
                     {stagedChanges.map(change => (
                       <div
                         key={change.id}
-                        className="flex items-center gap-2 p-2 bg-[#0e0e0e] rounded hover:bg-gray-800 transition-colors group"
+                        className="flex items-center gap-2 p-2 bg-[#0d1117] rounded hover:bg-gray-800 transition-colors group"
                       >
                         {getChangeIcon(change.changeType)}
                         <span className="flex-1 text-sm truncate">{change.filePath}</span>
@@ -286,7 +286,7 @@ const GitPanel = ({ projectId, onClose }) => {
                     {unstagedChanges.map(change => (
                       <div
                         key={change.id}
-                        className="flex items-center gap-2 p-2 bg-[#0e0e0e] rounded hover:bg-gray-800 transition-colors group"
+                        className="flex items-center gap-2 p-2 bg-[#0d1117] rounded hover:bg-gray-800 transition-colors group"
                       >
                         {getChangeIcon(change.changeType)}
                         <span className="flex-1 text-sm truncate">{change.filePath}</span>
@@ -323,7 +323,7 @@ const GitPanel = ({ projectId, onClose }) => {
                 commits.map(commit => (
                   <div
                     key={commit.sha}
-                    className="p-3 bg-[#0e0e0e] rounded hover:bg-gray-800 transition-colors"
+                    className="p-3 bg-[#0d1117] rounded hover:bg-gray-800 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       <GitCommit size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />

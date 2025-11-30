@@ -77,7 +77,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
   if (error) {
     return (
       <div className="flex items-center justify-center h-full p-4">
-        <div className="max-w-md p-4 bg-[#252525] border border-red-900/50 rounded-lg">
+        <div className="max-w-md p-4 bg-[#161b22] border border-red-900/50 rounded-lg">
           <div className="flex items-center gap-2 text-red-400 mb-2">
             <AlertTriangle size={18} />
             <span className="font-semibold">Error</span>
@@ -93,7 +93,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
     return (
       <div className="flex items-center justify-center h-full p-8 text-center">
         <div>
-          <div className="w-16 h-16 bg-[#252525] rounded-full flex items-center justify-center mx-auto mb-3">
+          <div className="w-16 h-16 bg-[#161b22] rounded-full flex items-center justify-center mx-auto mb-3">
             <Code size={32} className="text-gray-400" />
           </div>
           <h3 className="font-semibold mb-2 text-gray-200">Ready for Instant Edits</h3>
@@ -344,9 +344,9 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
       {/* Professional Diff Viewer */}
       {showDiffViewer && currentMessageEdits.length > 0 && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#1e1e1e] border border-[#2d2d2d] rounded-lg w-full max-w-7xl max-h-[90vh] flex flex-col">
+          <div className="bg-[#0d1117] border border-[#30363d] rounded-lg w-full max-w-7xl max-h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#2d2d2d]">
+            <div className="flex items-center justify-between p-4 border-b border-[#30363d]">
               <div>
                 <h3 className="font-semibold mb-1 text-gray-200">Professional Diff Viewer</h3>
                 <p className="text-xs text-gray-500">
@@ -355,7 +355,7 @@ const InstantEditView = ({ response, conversationHistory, isLoading, error, proj
               </div>
               <button
                 onClick={() => setShowDiffViewer(false)}
-                className="p-2 hover:bg-[#2d2d2d] rounded transition-colors text-gray-400 hover:text-gray-200"
+                className="p-2 hover:bg-[#30363d] rounded transition-colors text-gray-400 hover:text-gray-200"
               >
                 <XCircle size={20} />
               </button>
@@ -391,29 +391,29 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
     <div className="space-y-2">
       {/* User Message */}
       <div className="flex items-start gap-2 max-w-full">
-        <div className="flex-shrink-0 w-6 h-6 bg-[#2d2d2d] rounded-full flex items-center justify-center mt-1">
+        <div className="flex-shrink-0 w-6 h-6 bg-[#30363d] rounded-full flex items-center justify-center mt-1">
           <User size={14} className="text-gray-400" />
         </div>
-        <div className="flex-1 min-w-0 bg-[#252525] border border-[#3d3d3d] rounded-lg p-3 overflow-hidden">
+        <div className="flex-1 min-w-0 bg-[#161b22] border border-[#484f58] rounded-lg p-3 overflow-hidden">
           <div className="text-sm text-gray-200 whitespace-pre-wrap break-words">{userContent}</div>
         </div>
       </div>
 
       {/* Assistant Message */}
       <div className="flex items-start gap-2 max-w-full">
-        <div className="flex-shrink-0 w-6 h-6 bg-[#2d2d2d] rounded-full flex items-center justify-center mt-1">
+        <div className="flex-shrink-0 w-6 h-6 bg-[#30363d] rounded-full flex items-center justify-center mt-1">
           <Bot size={14} className="text-gray-400" />
         </div>
         <div className="flex-1 min-w-0 space-y-2 overflow-hidden">
           {/* Explanation Text */}
-          <div className="bg-[#252525] border border-[#3d3d3d] rounded-lg p-3 overflow-hidden">
+          <div className="bg-[#161b22] border border-[#484f58] rounded-lg p-3 overflow-hidden">
             <div className="text-sm text-gray-200 whitespace-pre-wrap break-words">
               {formatAssistantMessage(assistantContent)}
             </div>
 
             {/* Context Chunks Info */}
             {hasContext && (
-              <div className="mt-2 pt-2 border-t border-[#3d3d3d]">
+              <div className="mt-2 pt-2 border-t border-[#484f58]">
                 <div className="text-xs text-gray-400 mb-1">
                   📚 Used {contextChunks.length} code context{contextChunks.length > 1 ? 's' : ''}
                 </div>
@@ -433,7 +433,7 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
 
         {/* Edit Summary */}
         {hasEdits && summary && (
-          <div className="bg-[#252525] border border-[#3d3d3d] rounded-lg p-3">
+          <div className="bg-[#161b22] border border-[#484f58] rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-xs font-semibold text-gray-300">Suggested Changes</h4>
               <div className="flex items-center gap-2">
@@ -443,7 +443,7 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                 {onShowDiffViewer && (
                   <button
                     onClick={onShowDiffViewer}
-                    className="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                    className="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded text-xs font-medium transition-colors flex items-center gap-1"
                     title="Open in Professional Diff Viewer"
                   >
                     <Code size={12} />
@@ -496,11 +496,11 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                   className={`rounded-lg border transition-all overflow-hidden ${
                     isApplied
                       ? 'bg-[#1e3a1e] border-green-900/50'
-                      : 'bg-[#252525] border-[#3d3d3d] hover:border-[#4d4d4d]'
+                      : 'bg-[#161b22] border-[#484f58] hover:border-[#6e7681]'
                   }`}
                 >
                   {/* Header with Action Tag and Buttons */}
-                  <div className="flex items-center justify-between px-3 py-2 bg-[#1e1e1e] border-b border-[#2d2d2d]">
+                  <div className="flex items-center justify-between px-3 py-2 bg-[#0d1117] border-b border-[#30363d]">
                     <div className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer" onClick={toggleExpand}>
                       <span className={`text-xs font-semibold px-2 py-1 rounded flex-shrink-0 ${
                         edit.action === 'create' ? 'bg-[#0e639c] text-[#4fc3f7]' :
@@ -521,7 +521,7 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                           e.stopPropagation();
                           toggleExpand();
                         }}
-                        className="ml-auto p-1 hover:bg-[#2d2d2d] rounded transition-colors"
+                        className="ml-auto p-1 hover:bg-[#30363d] rounded transition-colors"
                         title={isExpanded ? "Collapse" : "Expand"}
                       >
                         {isExpanded ? (
@@ -543,7 +543,7 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                         <>
                           <button
                             onClick={() => onPreview(edit)}
-                            className="p-1.5 hover:bg-[#2d2d2d] rounded transition-colors"
+                            className="p-1.5 hover:bg-[#30363d] rounded transition-colors"
                             title="Preview diff"
                           >
                             <Eye size={14} className="text-gray-400 hover:text-gray-200" />
@@ -559,7 +559,7 @@ const ConversationMessage = ({ userContent, assistantContent, edits, summary, co
                               }
                             }}
                             disabled={isApplying}
-                            className="p-1.5 hover:bg-[#2d2d2d] disabled:bg-transparent disabled:cursor-not-allowed rounded transition-colors"
+                            className="p-1.5 hover:bg-[#30363d] disabled:bg-transparent disabled:cursor-not-allowed rounded transition-colors"
                             title={onShowDiffInEditor ? "Show diff in editor" : "Apply this edit"}
                           >
                             {isApplying ? (
@@ -635,7 +635,7 @@ const formatAssistantMessage = (content) => {
     if (part.startsWith('```') && part.endsWith('```')) {
       const code = part.slice(3, -3).trim();
       return (
-        <pre key={index} className="my-2 text-xs bg-[#0e0e0e] p-2 rounded overflow-x-auto border border-[#2d2d2d]">
+        <pre key={index} className="my-2 text-xs bg-[#0e0e0e] p-2 rounded overflow-x-auto border border-[#30363d]">
           <code className="text-gray-400">{code}</code>
         </pre>
       );
@@ -644,7 +644,7 @@ const formatAssistantMessage = (content) => {
     if (part.startsWith('`') && part.endsWith('`')) {
       const code = part.slice(1, -1);
       return (
-        <code key={index} className="px-1.5 py-0.5 bg-[#2d2d2d] text-gray-300 rounded text-xs font-mono">
+        <code key={index} className="px-1.5 py-0.5 bg-[#30363d] text-gray-300 rounded text-xs font-mono">
           {code}
         </code>
       );
@@ -690,9 +690,9 @@ const DiffModal = ({ edit, onClose, onApply }) => {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-[#1e1e1e] border border-[#2d2d2d] rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-[#0d1117] border border-[#30363d] rounded-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#2d2d2d]">
+        <div className="flex items-center justify-between p-4 border-b border-[#30363d]">
           <div>
             <h3 className="font-semibold mb-1 text-gray-200">Diff Preview</h3>
             <p className="text-xs text-gray-500">
@@ -702,7 +702,7 @@ const DiffModal = ({ edit, onClose, onApply }) => {
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-[#2d2d2d] rounded transition-colors text-gray-400 hover:text-gray-200"
+            className="p-2 hover:bg-[#30363d] rounded transition-colors text-gray-400 hover:text-gray-200"
           >
             <XCircle size={20} />
           </button>
@@ -712,18 +712,18 @@ const DiffModal = ({ edit, onClose, onApply }) => {
         <div className="flex-1 overflow-hidden flex">
           {/* Before */}
           {edit.oldCode && (
-            <div className="flex-1 border-r border-[#2d2d2d] flex flex-col">
-              <div className="px-4 py-2 bg-[#2d1a1a] border-b border-[#2d2d2d] flex items-center justify-between">
+            <div className="flex-1 border-r border-[#30363d] flex flex-col">
+              <div className="px-4 py-2 bg-[#2d1a1a] border-b border-[#30363d] flex items-center justify-between">
                 <span className="text-xs font-semibold text-red-400">Before</span>
                 <button
                   onClick={() => copyToClipboard(edit.oldCode)}
-                  className="p-1 hover:bg-[#3d3d3d] rounded transition-colors"
+                  className="p-1 hover:bg-[#484f58] rounded transition-colors"
                   title="Copy"
                 >
                   <Copy size={14} className="text-gray-500" />
                 </button>
               </div>
-              <div className="flex-1 overflow-auto bg-[#1e1e1e]">
+              <div className="flex-1 overflow-auto bg-[#0d1117]">
                 <pre className="text-xs p-4">
                   <code className="text-gray-400">{edit.oldCode}</code>
                 </pre>
@@ -734,11 +734,11 @@ const DiffModal = ({ edit, onClose, onApply }) => {
           {/* After */}
           {edit.newCode && (
             <div className="flex-1 flex flex-col">
-              <div className="px-4 py-2 bg-[#1a2d1a] border-b border-[#2d2d2d] flex items-center justify-between">
+              <div className="px-4 py-2 bg-[#1a2d1a] border-b border-[#30363d] flex items-center justify-between">
                 <span className="text-xs font-semibold text-green-400">After</span>
                 <button
                   onClick={() => copyToClipboard(edit.newCode)}
-                  className="p-1 hover:bg-[#3d3d3d] rounded transition-colors"
+                  className="p-1 hover:bg-[#484f58] rounded transition-colors"
                   title="Copy"
                 >
                   {copied ? (
@@ -748,7 +748,7 @@ const DiffModal = ({ edit, onClose, onApply }) => {
                   )}
                 </button>
               </div>
-              <div className="flex-1 overflow-auto bg-[#1e1e1e]">
+              <div className="flex-1 overflow-auto bg-[#0d1117]">
                 <pre className="text-xs p-4">
                   <code className="text-gray-400">{edit.newCode}</code>
                 </pre>
@@ -758,16 +758,16 @@ const DiffModal = ({ edit, onClose, onApply }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#2d2d2d] flex items-center gap-3">
+        <div className="p-4 border-t border-[#30363d] flex items-center gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-[#2d2d2d] hover:bg-[#3d3d3d] rounded font-medium transition-colors text-gray-300"
+            className="flex-1 px-4 py-2 bg-[#30363d] hover:bg-[#484f58] rounded font-medium transition-colors text-gray-300"
           >
             Cancel
           </button>
           <button
             onClick={onApply}
-            className="flex-1 px-4 py-2 bg-[#2d2d2d] hover:bg-[#3d3d3d] rounded font-medium transition-colors flex items-center justify-center gap-2 text-gray-300"
+            className="flex-1 px-4 py-2 bg-[#30363d] hover:bg-[#484f58] rounded font-medium transition-colors flex items-center justify-center gap-2 text-gray-300"
           >
             <CheckCircle size={18} />
             Apply Changes
