@@ -75,16 +75,23 @@ log.info('Initializing services...');
 const db = new DatabaseSchema(DATABASE_PATH);
 log.info('✓ Database initialized');
 
-// Redis
-const redis = new RedisCache({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-  db: parseInt(process.env.REDIS_DB || '0'),
-  prefix: process.env.CACHE_PREFIX || 'code-chat',
-  ttl: parseInt(process.env.CACHE_TTL || '86400'),
-});
-log.info('✓ Redis cache initialized');
+// Redis (optional - server can run without it)
+let redis: RedisCache | null = null;
+try {
+  redis = new RedisCache({
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB || '0'),
+    prefix: process.env.CACHE_PREFIX || 'code-chat',
+    ttl: parseInt(process.env.CACHE_TTL || '86400'),
+  });
+  log.info('✓ Redis cache initialized');
+} catch (err) {
+  log.warn('⚠️  Redis not available. Cache will be disabled. Server will continue without Redis.');
+  log.warn(`   Error: ${(err as Error).message}`);
+  log.warn('   Set REDIS_HOST and REDIS_PORT to enable caching.');
+}
 
 // ChromaDB
 const chroma = new ChromaService({
@@ -153,7 +160,7 @@ if (aiProvider === 'gemini') {
 // Code ingestion
 const ingestionService = new CodeIngestionService(
   db,
-  redis,
+  redis, // Can be null - service handles it gracefully
   chroma,
   embeddings
 );
@@ -251,14 +258,22 @@ app.use((req, res, next) => {
 // Health check
 app.get('/health', async (req, res) => {
   try {
-    const redisHealth = await redis.ping();
+    let redisHealth = false;
+    if (redis) {
+      try {
+        redisHealth = await redis.ping();
+      } catch (err) {
+        redisHealth = false;
+      }
+    }
+    
     const chromaHealth = await chroma.healthCheck();
 
     const health = {
-      status: redisHealth && chromaHealth ? 'healthy' : 'unhealthy',
+      status: chromaHealth ? 'healthy' : 'unhealthy', // Redis is optional
       timestamp: Date.now(),
       services: {
-        redis: redisHealth ? 'up' : 'down',
+        redis: redis ? (redisHealth ? 'up' : 'down') : 'disabled',
         chroma: chromaHealth ? 'up' : 'down',
         database: 'up',
       },
@@ -282,7 +297,14 @@ app.get('/stats', async (req, res) => {
     const fileCount = (dbStats.prepare('SELECT COUNT(*) as count FROM files').get() as { count: number }).count;
     const chunkCount = (dbStats.prepare('SELECT COUNT(*) as count FROM chunks').get() as { count: number }).count;
 
-    const redisStats = await redis.getStats();
+    let redisStats = null;
+    if (redis) {
+      try {
+        redisStats = await redis.getStats();
+      } catch (err) {
+        redisStats = { error: 'Redis unavailable' };
+      }
+    }
 
     res.json({
       database: {
@@ -365,14 +387,26 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   log.info('\nSIGTERM received, shutting down gracefully...');
-  await redis.close();
+  if (redis) {
+    try {
+      await redis.close();
+    } catch (err) {
+      log.error('Error closing Redis:', err);
+    }
+  }
   db.close();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   log.info('\nSIGINT received, shutting down gracefully...');
-  await redis.close();
+  if (redis) {
+    try {
+      await redis.close();
+    } catch (err) {
+      log.error('Error closing Redis:', err);
+    }
+  }
   db.close();
   process.exit(0);
 });

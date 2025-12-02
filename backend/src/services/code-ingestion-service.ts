@@ -39,7 +39,7 @@ export interface IngestionResult {
 export class CodeIngestionService {
   constructor(
     private db: DatabaseSchema,
-    private redis: RedisCache,
+    private redis: RedisCache | null,
     private chroma: ChromaService,
     private embeddings: IEmbeddingService
   ) {}
@@ -182,11 +182,13 @@ export class CodeIngestionService {
     let reused = 0;
     let computed = 0;
 
-    // PHASE 1: Check all cache entries in parallel
+    // PHASE 1: Check all cache entries in parallel (if Redis available)
     console.log(`[Parallel] Checking cache for ${chunksToProcess.length} chunks...`);
-    const cacheCheckPromises = chunksToProcess.map(item =>
-      this.redis.getEmbedding(item.chunkHash).then(cached => ({ item, cached }))
-    );
+    const cacheCheckPromises = this.redis
+      ? chunksToProcess.map(item =>
+          this.redis!.getEmbedding(item.chunkHash).catch(() => null).then(cached => ({ item, cached }))
+        )
+      : chunksToProcess.map(item => Promise.resolve({ item, cached: null }));
     const cacheResults = await Promise.all(cacheCheckPromises);
 
     // PHASE 2: Separate cached and uncached chunks
@@ -231,16 +233,20 @@ export class CodeIngestionService {
 
         const batchResults = await Promise.all(embeddingPromises);
 
-        // Cache embeddings in parallel
-        const cachePromises = batchResults.map(({ item, embedding, qdrantId }) =>
-          this.redis.setEmbedding(
-            item.chunkHash,
-            embedding,
-            qdrantId,
-            this.embeddings.getModelName()
-          )
-        );
-        await Promise.all(cachePromises);
+        // Cache embeddings in parallel (if Redis available)
+        if (this.redis) {
+          const cachePromises = batchResults.map(({ item, embedding, qdrantId }) =>
+            this.redis!.setEmbedding(
+              item.chunkHash,
+              embedding,
+              qdrantId,
+              this.embeddings.getModelName()
+            ).catch(err => {
+              console.warn(`Failed to cache embedding for ${item.chunkHash}:`, err);
+            })
+          );
+          await Promise.all(cachePromises);
+        }
 
         // Add to results
         for (const { item, embedding, qdrantId } of batchResults) {
