@@ -24,49 +24,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          // Split node_modules into separate chunks
-          if (id.includes('node_modules')) {
-            // React core - keep together to avoid circular dependencies
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
-              return 'react-vendor';
-            }
-            // Clerk
-            if (id.includes('@clerk')) {
-              return 'clerk-vendor';
-            }
-            // CodeMirror
-            if (id.includes('@codemirror') || id.includes('@lezer')) {
-              return 'codemirror-vendor';
-            }
-            // Monaco Editor
-            if (id.includes('@monaco-editor') || id.includes('monaco-editor')) {
-              return 'monaco-vendor';
-            }
-            // Three.js and WebGL
-            if (id.includes('three') || id.includes('ogl')) {
-              return 'three-vendor';
-            }
-            // Terminal
-            if (id.includes('@xterm') || id.includes('xterm')) {
-              return 'terminal-vendor';
-            }
-            // WebContainer
-            if (id.includes('@webcontainer')) {
-              return 'webcontainer-vendor';
-            }
-            // Everything else from node_modules (including lucide-react)
-            // Keep other libraries together to avoid module initialization issues
-            return 'vendor';
-          }
-        },
-      },
-    },
-    chunkSizeWarningLimit: 1500,
-  },
+
   // server: {
   //   https: hasCustomCert ? {
   //     key: fs.readFileSync(keyPath),
