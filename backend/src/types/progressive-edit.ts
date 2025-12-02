@@ -53,7 +53,7 @@ export interface ParsedPlan {
     order: number;
     title: string;
     description: string;
-    file: string;
+    file?: string | null;
   }>;
 }
 

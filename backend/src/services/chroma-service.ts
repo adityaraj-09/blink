@@ -17,6 +17,7 @@ export interface ChunkPayload {
   startLine: number;
   endLine: number;
   indexedAt: number;
+  [key: string]: unknown;
 }
 
 /**
@@ -233,7 +234,7 @@ export class ChromaService {
           searchResults.push({
             id,
             score: similarity,
-            payload: metadata as ChunkPayload,
+            payload: metadata as unknown as ChunkPayload,
           });
         }
       }
@@ -292,7 +293,7 @@ export class ChromaService {
 
       return {
         vector: new Float32Array(embedding as number[]),
-        payload: metadata as ChunkPayload,
+        payload: metadata as unknown as ChunkPayload,
       };
     } catch (err) {
       console.error('Error getting point:', err);

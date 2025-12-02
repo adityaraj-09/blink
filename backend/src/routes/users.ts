@@ -181,7 +181,7 @@ export function createUsersRouter(db: DatabaseSchema): Router {
       res.json({ message: 'Profile updated successfully' });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: err.errors });
+        res.status(400).json({ error: 'Validation error', details: err.issues });
       } else {
         res.status(500).json({ error: 'Failed to update profile', details: (err as Error).message });
       }
@@ -415,7 +415,7 @@ export function createUsersRouter(db: DatabaseSchema): Router {
       res.json({ message: 'Preferences updated successfully' });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: err.errors });
+        res.status(400).json({ error: 'Validation error', details: err.issues });
       } else {
         res.status(500).json({ error: 'Failed to update preferences', details: (err as Error).message });
       }

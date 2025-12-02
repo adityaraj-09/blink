@@ -17,6 +17,8 @@ interface LocalProject {
     total_files: number;
     processed_files: number;
     total_chunks: number;
+    error_message?: string | null;
+    last_ingested_at?: number | null;
 }
 
 export function createLocalIngestRoutes(

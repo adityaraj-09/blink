@@ -612,7 +612,7 @@ Start planning now:`;
     // Determine the appropriate role for this TODO
     const role = this.determineRole({
       title: currentTodo.title,
-      description: currentTodo.description
+      description: currentTodo.description || ''
     });
     console.log(`[Task ${taskId}] TODO ${currentTodo.order_index}: Assigned role: ${role.persona.split('.')[0]}`);
 

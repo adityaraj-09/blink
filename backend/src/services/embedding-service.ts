@@ -1,9 +1,10 @@
 import OpenAI from 'openai';
+import { IEmbeddingService } from './interfaces';
 
 /**
  * Embedding service using OpenAI
  */
-export class EmbeddingService {
+export class EmbeddingService implements IEmbeddingService {
   private openai: OpenAI;
   private model: string;
   private dimension: number;

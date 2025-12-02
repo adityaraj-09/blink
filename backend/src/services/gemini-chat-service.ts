@@ -1,56 +1,14 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChromaService, SearchResult } from './chroma-service';
-import { GeminiEmbeddingService } from './gemini-embedding-service';
+import { IEmbeddingService, IChatService, ChatMessage, ChatRequest, ChatResponse } from './interfaces';
 import { DatabaseSchema } from '../database/schema';
 import { v4 as uuidv4 } from 'uuid';
-
-/**
- * Chat message
- */
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-/**
- * Chat request
- */
-export interface ChatRequest {
-  projectId: string;
-  userId: string;
-  sessionId?: string;
-  message: string;
-  maxContextChunks?: number;
-  minSimilarity?: number;
-}
-
-/**
- * Chat response
- */
-export interface ChatResponse {
-  sessionId: string;
-  messageId: string;
-  response: string;
-  contextChunks: Array<{
-    filePath: string;
-    startLine: number;
-    endLine: number;
-    chunkType: string;
-    chunkName?: string;
-    similarity: number;
-  }>;
-  tokenUsage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
-}
 
 /**
  * Chat service with RAG using Google Gemini
  * Retrieves relevant code chunks and uses them as context for LLM
  */
-export class GeminiChatService {
+export class GeminiChatService implements IChatService {
   private genAI: GoogleGenerativeAI;
   private model: string;
   private maxTokens: number;
@@ -59,7 +17,7 @@ export class GeminiChatService {
   constructor(
     private db: DatabaseSchema,
     private chroma: ChromaService,
-    private embeddings: GeminiEmbeddingService,
+    private embeddings: IEmbeddingService,
     config: {
       apiKey: string;
       model?: string;

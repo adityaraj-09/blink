@@ -12,12 +12,21 @@ const aiEditRequestSchema = z.object({
   message: z.string().min(1),
   fileContext: z.object({
     filePath: z.string(),
-    content: z.string().optional().nullable(),
-    startLine: z.number().int().positive().optional().nullable(),
-    endLine: z.number().int().positive().optional().nullable(),
-    cursorPosition: z.number().int().optional().nullable()
-  }).optional().nullable(),
-  sessionId: z.string().optional().nullable()
+    content: z.string().nullish(),
+    startLine: z.number().int().positive().nullish(),
+    endLine: z.number().int().positive().nullish(),
+    cursorPosition: z.number().int().nullish()
+  }).nullish().transform(val => {
+    if (!val) return undefined;
+    return {
+      filePath: val.filePath,
+      content: val.content ?? undefined,
+      startLine: val.startLine ?? undefined,
+      endLine: val.endLine ?? undefined,
+      cursorPosition: val.cursorPosition ?? undefined
+    };
+  }),
+  sessionId: z.string().nullish().transform(val => val ?? undefined)
 });
 
 const validateEditSchema = z.object({

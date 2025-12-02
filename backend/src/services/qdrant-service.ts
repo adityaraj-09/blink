@@ -17,6 +17,7 @@ export interface ChunkPayload {
   startLine: number;
   endLine: number;
   indexedAt: number;
+  [key: string]: unknown;
 }
 
 /**
@@ -66,7 +67,7 @@ export class QdrantService {
       // Check if collection exists
       const collections = await this.client.getCollections();
       const exists = collections.collections.some(
-        (c) => c.name === collectionName
+        (c: any) => c.name === collectionName
       );
 
       if (!exists) {
@@ -317,7 +318,7 @@ export class QdrantService {
       const info = await this.client.getCollection(collectionName);
       return {
         pointsCount: info.points_count,
-        vectorsCount: info.vectors_count,
+        vectorsCount: info.points_count, // vectors_count is deprecated/removed, using points_count
         segmentsCount: info.segments_count,
         status: info.status,
       };

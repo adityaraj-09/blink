@@ -1,7 +1,7 @@
 import { DatabaseSchema } from '../database/schema';
 import { RedisCache, computeChunkHash } from './redis-cache';
 import { ChromaService, ChunkPayload } from './chroma-service';
-import { EmbeddingService } from './embedding-service';
+import { IEmbeddingService } from './interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -41,7 +41,7 @@ export class CodeIngestionService {
     private db: DatabaseSchema,
     private redis: RedisCache,
     private chroma: ChromaService,
-    private embeddings: EmbeddingService
+    private embeddings: IEmbeddingService
   ) {}
 
   /**

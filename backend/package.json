@@ -23,6 +23,7 @@
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@google/generative-ai": "^0.21.0",
     "@octokit/rest": "^20.0.2",
+    "@qdrant/js-client-rest": "^1.16.2",
     "axios": "^1.6.5",
     "better-sqlite3": "^12.4.1",
     "chromadb": "^3.1.0",

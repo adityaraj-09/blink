@@ -96,8 +96,8 @@ export class GitOperationsService {
 
       return {
         filesChanged: pullSummary.files.length,
-        insertions: pullSummary.insertions || 0,
-        deletions: pullSummary.deletions || 0,
+        insertions: pullSummary.summary.insertions || 0,
+        deletions: pullSummary.summary.deletions || 0,
         summary: pullSummary.summary.changes + ' changes'
       };
     } catch (error: any) {
@@ -274,11 +274,11 @@ export class GitOperationsService {
     try {
       const diffSummary = await this.git.diffSummary();
 
-      return diffSummary.files.map(file => ({
+      return diffSummary.files.map((file: any) => ({
         file: file.file,
-        changes: file.changes,
-        insertions: file.insertions,
-        deletions: file.deletions,
+        changes: file.changes || 0,
+        insertions: file.insertions || 0,
+        deletions: file.deletions || 0,
         type: this.determineChangeType(file)
       }));
     } catch (error: any) {
@@ -354,7 +354,7 @@ export class GitOperationsService {
   async getCommitHistory(limit: number = 20): Promise<any[]> {
     try {
       const log = await this.git.log({ maxCount: limit });
-      return log.all;
+      return [...log.all];
     } catch (error: any) {
       console.error('Failed to get commit history:', error.message);
       throw new Error('Failed to get commit history');

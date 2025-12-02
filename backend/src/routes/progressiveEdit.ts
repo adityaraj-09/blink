@@ -60,7 +60,7 @@ export function createProgressiveEditRoutes(
       res.json(response);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: error.errors });
+        res.status(400).json({ error: 'Validation error', details: error.issues });
       } else {
         console.error('Progressive edit initiation failed:', error);
         res.status(500).json({ error: error.message || 'Failed to initiate progressive edit' });

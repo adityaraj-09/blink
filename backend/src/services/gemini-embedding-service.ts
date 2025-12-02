@@ -1,10 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { IEmbeddingService } from './interfaces';
 
 /**
  * Embedding service using Google Gemini
  * Supports text-embedding-004 model (768 dimensions)
  */
-export class GeminiEmbeddingService {
+export class GeminiEmbeddingService implements IEmbeddingService {
   private genAI: GoogleGenerativeAI;
   private model: string;
   private dimension: number;

@@ -297,7 +297,7 @@ app.get('/stats', async (req, res) => {
 app.use('/api/users', createUsersRouter(db));
 app.use('/api/projects', createProjectsRouter(db, chroma, ingestionService));
 app.use('/api/ingest', createIngestRouter(ingestionService, db));
-app.use('/api/chat', createChatRouter(GeminiChatService, db));
+app.use('/api/chat', createChatRouter(chatService, db));
 
 // GitHub integration routes
 app.use('/api/github', createGitHubRoutes(db, fileIngestionService));

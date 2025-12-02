@@ -84,7 +84,7 @@ export function createIngestRouter(
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: err.errors });
+        res.status(400).json({ error: 'Validation error', details: err.issues });
       } else {
         res.status(500).json({ error: 'Ingestion failed', details: (err as Error).message });
       }
@@ -118,7 +118,7 @@ export function createIngestRouter(
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: err.errors });
+        res.status(400).json({ error: 'Validation error', details: err.issues });
       } else {
         res.status(500).json({ error: 'Failed to delete file', details: (err as Error).message });
       }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { ChatService } from '../services/chat-service';
+import { IChatService } from '../services/interfaces';
 import { DatabaseSchema } from '../database/schema';
 import { z } from 'zod';
 import { requireAuth, AuthRequest } from '../middleware/auth';
@@ -15,7 +15,7 @@ const chatRequestSchema = z.object({
 });
 
 export function createChatRouter(
-  chatService: ChatService,
+  chatService: IChatService,
   db: DatabaseSchema
 ): Router {
   const router = Router();

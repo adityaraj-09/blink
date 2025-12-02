@@ -16,14 +16,14 @@ const createProjectSchema = z.object({
   projectName: z.string().min(1).max(255),
   description: z.string().optional(),
   repositoryUrl: z.string().url().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 const updateProjectSchema = z.object({
   projectName: z.string().min(1).max(255).optional(),
   description: z.string().optional(),
   repositoryUrl: z.string().url().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export function createProjectsRouter(
@@ -91,7 +91,7 @@ export function createProjectsRouter(
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: err.errors });
+        res.status(400).json({ error: 'Validation error', details: err.issues });
       } else {
         res.status(500).json({ error: 'Failed to create project', details: (err as Error).message });
       }
@@ -263,7 +263,7 @@ export function createProjectsRouter(
       res.json({ message: 'Project updated successfully' });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation error', details: err.errors });
+        res.status(400).json({ error: 'Validation error', details: err.issues });
       } else {
         res.status(500).json({ error: 'Failed to update project', details: (err as Error).message });
       }

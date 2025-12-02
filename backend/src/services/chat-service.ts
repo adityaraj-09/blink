@@ -1,56 +1,14 @@
 import OpenAI from 'openai';
 import { ChromaService, SearchResult } from './chroma-service';
-import { EmbeddingService } from './embedding-service';
+import { IEmbeddingService, IChatService, ChatMessage, ChatRequest, ChatResponse } from './interfaces';
 import { DatabaseSchema } from '../database/schema';
 import { v4 as uuidv4 } from 'uuid';
-
-/**
- * Chat message
- */
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-/**
- * Chat request
- */
-export interface ChatRequest {
-  projectId: string;
-  userId: string;
-  sessionId?: string;
-  message: string;
-  maxContextChunks?: number;
-  minSimilarity?: number;
-}
-
-/**
- * Chat response
- */
-export interface ChatResponse {
-  sessionId: string;
-  messageId: string;
-  response: string;
-  contextChunks: Array<{
-    filePath: string;
-    startLine: number;
-    endLine: number;
-    chunkType: string;
-    chunkName?: string;
-    similarity: number;
-  }>;
-  tokenUsage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
-}
 
 /**
  * Chat service with RAG
  * Retrieves relevant code chunks and uses them as context for LLM
  */
-export class ChatService {
+export class ChatService implements IChatService {
   private openai: OpenAI;
   private model: string;
   private maxTokens: number;
@@ -59,7 +17,7 @@ export class ChatService {
   constructor(
     private db: DatabaseSchema,
     private chroma: ChromaService,
-    private embeddings: EmbeddingService,
+    private embeddings: IEmbeddingService,
     config: {
       apiKey: string;
       model?: string;
