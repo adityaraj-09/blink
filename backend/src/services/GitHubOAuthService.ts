@@ -36,7 +36,14 @@ export class GitHubOAuthService {
   private clientSecret: string;
   private callbackUrl: string;
   private db: DatabaseSchema;
-  private encryption = getEncryptionService();
+  private _encryption: ReturnType<typeof getEncryptionService> | null = null;
+
+  private get encryption() {
+    if (!this._encryption) {
+      this._encryption = getEncryptionService();
+    }
+    return this._encryption;
+  }
 
   constructor(db: DatabaseSchema) {
     this.clientId = process.env.GITHUB_CLIENT_ID || '';

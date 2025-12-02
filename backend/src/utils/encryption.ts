@@ -72,10 +72,24 @@ let encryptionService: EncryptionService | null = null;
 
 export function getEncryptionService(): EncryptionService {
   if (!encryptionService) {
-    const key = process.env.ENCRYPTION_KEY;
+    let key = process.env.ENCRYPTION_KEY;
+    
+    // For development: generate a default key if not set (warn user)
     if (!key) {
-      throw new Error('ENCRYPTION_KEY environment variable is required');
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'ENCRYPTION_KEY environment variable is required in production. ' +
+          'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+        );
+      }
+      
+      // Development fallback: use a default key (not secure, but allows dev to proceed)
+      console.warn('⚠️  WARNING: ENCRYPTION_KEY not set. Using development default key. ' +
+                   'This is NOT secure for production!');
+      console.warn('   Generate a secure key: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+      key = 'development-default-encryption-key-not-secure-change-in-production';
     }
+    
     encryptionService = new EncryptionService(key);
   }
   return encryptionService;
