@@ -5,8 +5,8 @@
 import React from 'react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CodeMirrorEditorWithInlineEdit from '../components/CodeMirrorEditorWithInlineEdit';
-import CodeMirrorDiffViewer from '../components/CodeMirrorDiffViewer';
+import CodeMirrorEditorWithInlineEdit from '../components/CodeMirrorEditorWithInlineEdit.jsx';
+import CodeMirrorDiffViewer from '../components/CodeMirrorDiffViewer.jsx';
 import {
   Bot,
   Github,

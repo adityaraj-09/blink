@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout';
-import FilePreviewModal from '../components/FilePreviewModal';
+import DashboardLayout from '../components/DashboardLayout.jsx';
+import FilePreviewModal from '../components/FilePreviewModal.jsx';
 import {
   ArrowLeft,
   Code2,

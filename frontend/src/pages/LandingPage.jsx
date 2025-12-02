@@ -1,12 +1,12 @@
-import Navbar from '../components/Navbar';
-import Hero from '../components/Hero';
-import Stats from '../components/Stats';
-import Features from '../components/Features';
-import Pricing from '../components/Pricing';
-import Testimonials from '../components/Testimonials';
-import CTA from '../components/CTA';
-import Footer from '../components/Footer';
-import FAQ from '../components/FAQ';
+import Navbar from '../components/Navbar.jsx';
+import Hero from '../components/Hero.jsx';
+import Stats from '../components/Stats.jsx';
+import Features from '../components/Features.jsx';
+import Pricing from '../components/Pricing.jsx';
+import Testimonials from '../components/Testimonials.jsx';
+import CTA from '../components/CTA.jsx';
+import Footer from '../components/Footer.jsx';
+import FAQ from '../components/FAQ.jsx';
 
 const LandingPage = () => {
   return (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout.jsx';
 import {
   MapPin,
   Link as LinkIcon,

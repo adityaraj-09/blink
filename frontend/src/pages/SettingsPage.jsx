@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
+import DashboardLayout from '../components/DashboardLayout.jsx';
 import {
   User,
   Bell,

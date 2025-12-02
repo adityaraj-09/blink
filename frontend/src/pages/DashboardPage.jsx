@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import DashboardLayout from '../components/DashboardLayout';
-import GitHubImportModal from '../components/GitHubImportModal';
-import CreateProjectModal from '../components/CreateProjectModal';
-import IngestionProgressModal from '../components/IngestionProgressModal';
+import DashboardLayout from '../components/DashboardLayout.jsx';
+import GitHubImportModal from '../components/GitHubImportModal.jsx';
+import CreateProjectModal from '../components/CreateProjectModal.jsx';
+import IngestionProgressModal from '../components/IngestionProgressModal.jsx';
 import {
   FolderGit2,
   Clock,
