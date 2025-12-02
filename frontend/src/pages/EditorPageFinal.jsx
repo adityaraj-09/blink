@@ -36,13 +36,13 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
-import AIChatPanel from '../components/AIChatPanel';
-import FileSearchModal from '../components/FileSearchModal';
-import GitPanel from '../components/GitPanel';
-import WebContainerTerminal from '../components/WebContainerTerminal';
-import SettingsPanel from '../components/SettingsPanel';
-import BrowserCompatibilityWarning from '../components/BrowserCompatibilityWarning';
-import PreviewPanel from '../components/PreviewPanel';
+import AIChatPanel from '../components/AIChatPanel.jsx';
+import FileSearchModal from '../components/FileSearchModal.jsx';
+import GitPanel from '../components/GitPanel.jsx';
+import WebContainerTerminal from '../components/WebContainerTerminal.jsx';
+import SettingsPanel from '../components/SettingsPanel.jsx';
+import BrowserCompatibilityWarning from '../components/BrowserCompatibilityWarning.jsx';
+import PreviewPanel from '../components/PreviewPanel.jsx';
 import { useAPIAuth } from '../hooks/useAPI';
 import { getProject, getProjectFiles, getAllFilesWithContent } from '../api/projects';
 import { getFileContent, updateFileContent, deleteFile, syncWithMerkleTree } from '../api/files';
