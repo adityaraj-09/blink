@@ -30,8 +30,8 @@ export default defineConfig({
         manualChunks(id) {
           // Split node_modules into separate chunks
           if (id.includes('node_modules')) {
-            // React core
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            // React core - keep together to avoid circular dependencies
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router') || id.includes('scheduler')) {
               return 'react-vendor';
             }
             // Clerk
@@ -58,11 +58,8 @@ export default defineConfig({
             if (id.includes('@webcontainer')) {
               return 'webcontainer-vendor';
             }
-            // Other large libraries
-            if (id.includes('lucide-react')) {
-              return 'icons-vendor';
-            }
-            // Everything else from node_modules
+            // Everything else from node_modules (including lucide-react)
+            // Keep other libraries together to avoid module initialization issues
             return 'vendor';
           }
         },
