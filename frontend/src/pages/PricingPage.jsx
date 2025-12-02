@@ -1,8 +1,8 @@
 import { SignInButton, SignedIn, SignedOut } from '@clerk/clerk-react';
 import { Check, Star, Zap, Crown } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import Pricing from '../components/Pricing';
+import Navbar from '../components/Navbar.jsx';
+import Footer from '../components/Footer.jsx';
+import Pricing from '../components/Pricing.jsx';
 
 const PricingPage = () => {
   const pricingPlans = [
