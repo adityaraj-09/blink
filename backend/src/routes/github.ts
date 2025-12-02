@@ -216,7 +216,7 @@ export function createGitHubRoutes(
    * DELETE /api/github/auth/disconnect
    * Disconnect GitHub integration
    */
-  router.delete('/auth/disconnect', async (req: Request, res: Response) => {
+  router.delete('/auth/disconnect', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -236,7 +236,7 @@ export function createGitHubRoutes(
    * GET /api/github/repositories
    * List user's GitHub repositories
    */
-  router.get('/repositories', async (req: Request, res: Response) => {
+  router.get('/repositories', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -346,7 +346,7 @@ export function createGitHubRoutes(
    * GET /api/github/import/status/:projectId
    * Check import/sync status and file ingestion progress
    */
-  router.get('/import/status/:projectId', async (req: Request, res: Response) => {
+  router.get('/import/status/:projectId', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -391,7 +391,7 @@ export function createGitHubRoutes(
    * POST /api/projects/:projectId/sync
    * Sync repository (pull latest changes)
    */
-  router.post('/:projectId/sync', async (req: Request, res: Response) => {
+  router.post('/:projectId/sync', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -418,7 +418,7 @@ export function createGitHubRoutes(
    * GET /api/projects/:projectId/branches
    * List branches
    */
-  router.get('/:projectId/branches', async (req: Request, res: Response) => {
+  router.get('/:projectId/branches', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -455,7 +455,7 @@ export function createGitHubRoutes(
    * POST /api/projects/:projectId/branches
    * Create or switch branch
    */
-  router.post('/:projectId/branches', async (req: Request, res: Response) => {
+  router.post('/:projectId/branches', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;

@@ -29,7 +29,7 @@ export function createProgressiveEditRoutes(
    * POST /api/ai/edit/progressive
    * Initiate progressive code editing (returns taskId immediately)
    */
-  router.post('/progressive', async (req: Request, res: Response) => {
+  router.post('/progressive', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -72,7 +72,7 @@ export function createProgressiveEditRoutes(
    * GET /api/ai/edit/tasks/:taskId/status
    * Get task status and progress (polling endpoint)
    */
-  router.get('/tasks/:taskId/status', async (req: Request, res: Response) => {
+  router.get('/tasks/:taskId/status', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -107,7 +107,7 @@ export function createProgressiveEditRoutes(
    * DELETE /api/ai/edit/tasks/:taskId
    * Cancel a running task
    */
-  router.delete('/tasks/:taskId', async (req: Request, res: Response) => {
+  router.delete('/tasks/:taskId', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -145,7 +145,7 @@ export function createProgressiveEditRoutes(
    * GET /api/ai/edit/tasks
    * List user's tasks
    */
-  router.get('/tasks', async (req: Request, res: Response) => {
+  router.get('/tasks', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {

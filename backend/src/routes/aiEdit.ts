@@ -98,7 +98,7 @@ export function createAIEditRoutes(
    * POST /api/ai/edit
    * AI-powered code editing with LLM
    */
-  router.post('/edit', async (req: Request, res: Response) => {
+  router.post('/edit', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -141,7 +141,7 @@ export function createAIEditRoutes(
    * GET /api/ai/sessions/:projectId
    * Get all chat sessions for a project
    */
-  router.get('/sessions/:projectId', async (req: Request, res: Response) => {
+  router.get('/sessions/:projectId', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -193,7 +193,7 @@ export function createAIEditRoutes(
    * GET /api/ai/messages/:sessionId
    * Get all messages for a chat session
    */
-  router.get('/messages/:sessionId', async (req: Request, res: Response) => {
+  router.get('/messages/:sessionId', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {

@@ -23,7 +23,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * GET /api/projects/:projectId/files
    * Get file content (filePath sent as query parameter)
    */
-  router.get('/:projectId/files', async (req: Request, res: Response) => {
+  router.get('/:projectId/files', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -80,7 +80,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * PUT /api/projects/:projectId/files
    * Modify file content (filePath sent as query parameter)
    */
-  router.put('/:projectId/files', async (req: Request, res: Response) => {
+  router.put('/:projectId/files', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -131,7 +131,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * DELETE /api/projects/:projectId/files
    * Delete file (filePath sent as query parameter)
    */
-  router.delete('/:projectId/files', async (req: Request, res: Response) => {
+  router.delete('/:projectId/files', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -174,7 +174,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * GET /api/projects/:projectId/changes
    * List pending changes
    */
-  router.get('/:projectId/changes', async (req: Request, res: Response) => {
+  router.get('/:projectId/changes', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -215,7 +215,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * POST /api/projects/:projectId/changes/stage
    * Stage or unstage changes
    */
-  router.post('/:projectId/changes/stage', async (req: Request, res: Response) => {
+  router.post('/:projectId/changes/stage', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -270,7 +270,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * POST /api/projects/:projectId/changes/revert
    * Revert changes
    */
-  router.post('/:projectId/changes/revert', async (req: Request, res: Response) => {
+  router.post('/:projectId/changes/revert', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -311,7 +311,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * POST /api/projects/:projectId/commit
    * Create a commit from staged changes
    */
-  router.post('/:projectId/commit', async (req: Request, res: Response) => {
+  router.post('/:projectId/commit', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -398,7 +398,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * POST /api/projects/:projectId/push
    * Push commits to GitHub
    */
-  router.post('/:projectId/push', async (req: Request, res: Response) => {
+  router.post('/:projectId/push', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;
@@ -456,7 +456,7 @@ export function createGitHubFileRoutes(db: DatabaseSchema): Router {
    * GET /api/projects/:projectId/commits
    * List commit history
    */
-  router.get('/:projectId/commits', async (req: Request, res: Response) => {
+  router.get('/:projectId/commits', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       const { projectId } = req.params;

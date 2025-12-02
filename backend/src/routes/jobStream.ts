@@ -26,7 +26,7 @@ export function createJobStreamRoutes(db: DatabaseSchema): Router {
    * POST /api/jobs/start
    * Start a new job and add to queue
    */
-  router.post('/start', async (req: Request, res: Response) => {
+  router.post('/start', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -80,7 +80,7 @@ export function createJobStreamRoutes(db: DatabaseSchema): Router {
    * GET /api/jobs/:jobId/stream
    * SSE endpoint for real-time job progress
    */
-  router.get('/:jobId/stream', async (req: Request, res: Response) => {
+  router.get('/:jobId/stream', async (req: AuthRequest, res: Response) => {
     const userId = req.auth?.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -251,7 +251,7 @@ export function createJobStreamRoutes(db: DatabaseSchema): Router {
    * GET /api/jobs/:jobId/status
    * Get current job status (for polling fallback)
    */
-  router.get('/:jobId/status', async (req: Request, res: Response) => {
+  router.get('/:jobId/status', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
@@ -312,7 +312,7 @@ export function createJobStreamRoutes(db: DatabaseSchema): Router {
    * GET /api/jobs
    * List user's jobs
    */
-  router.get('/', async (req: Request, res: Response) => {
+  router.get('/', async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.auth?.userId;
       if (!userId) {
