@@ -327,7 +327,7 @@ const DashboardPage = () => {
 
   // Redirect to sign in if not authenticated
   useEffect(() => {
-    if (isElectron()) return;
+  
 
     if (isLoaded && !isSignedIn) {
       console.log('User not signed in, redirecting to sign in page');
