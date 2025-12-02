@@ -6,46 +6,6 @@ import { dark } from '@clerk/themes';
 
 const SignInPage = () => {
   const navigate = useNavigate();
-
-
-
-  // Listen for auth success in Electron
-  React.useEffect(() => {
-    if (!window.electronAPI) {
-      console.log('[SignIn] Not in Electron, skipping auth listener');
-      return;
-    }
-
-    console.log('[SignIn] Setting up Electron auth listeners');
-
-    const unsubSuccess = window.electronAPI.auth.onSuccess((data) => {
-      console.log('[SignIn] Auth success received:', data.user?.email);
-      setIsLoading(false);
-      // Delay to ensure auth is fully propagated to global cache before navigation
-      setTimeout(() => {
-        console.log('[SignIn] Navigating to dashboard...');
-        navigate('/dashboard');
-      }, 200);
-    });
-
-    const unsubRestored = window.electronAPI.auth.onRestored((data) => {
-      console.log('[SignIn] Auth restored:', data.user?.email);
-      navigate('/dashboard');
-    });
-
-    // Check if already authenticated
-    window.electronAPI.auth.getStored().then((authData) => {
-      if (authData && authData.token) {
-        console.log('[SignIn] Already authenticated, redirecting...');
-        navigate('/dashboard');
-      }
-    });
-
-    return () => {
-      unsubSuccess();
-      unsubRestored();
-    };
-  }, [navigate]);
   return (
     <div className="h-screen  bg-[#0f1318] flex items-center justify-center p-4 sm:p-8 font-dm-sans">
       <div className="w-full m-4 max-w-[1200px] bg-[#0f1318] rounded-[30px] overflow-hidden flex shadow-2xl border border-white/5 relative">
