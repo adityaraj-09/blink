@@ -166,6 +166,12 @@ log.info('✓ File ingestion service initialized');
 
 // GitHub and file editing services
 const githubAuth = new GitHubOAuthService(db);
+if (!githubAuth.isConfigured()) {
+  log.warn('⚠️  GitHub OAuth not configured. GitHub integration features will be disabled.');
+  log.warn('   Set GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and GITHUB_CALLBACK_URL to enable.');
+} else {
+  log.info('✓ GitHub OAuth service initialized');
+}
 const fileEditService = new FileEditService(db);
 const repoSyncService = new RepoSyncService(db, githubAuth, fileIngestionService);
 

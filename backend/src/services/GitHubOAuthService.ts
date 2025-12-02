@@ -50,9 +50,23 @@ export class GitHubOAuthService {
     this.clientSecret = process.env.GITHUB_CLIENT_SECRET || '';
     this.callbackUrl = process.env.GITHUB_CALLBACK_URL || '';
     this.db = db;
+  }
 
-    if (!this.clientId || !this.clientSecret || !this.callbackUrl) {
-      throw new Error('GitHub OAuth configuration is missing in environment variables');
+  /**
+   * Check if GitHub OAuth is configured
+   */
+  isConfigured(): boolean {
+    return !!(this.clientId && this.clientSecret && this.callbackUrl);
+  }
+
+  /**
+   * Ensure GitHub OAuth is configured, throw error if not
+   */
+  private ensureConfigured(): void {
+    if (!this.isConfigured()) {
+      throw new Error(
+        'GitHub OAuth is not configured. Set GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and GITHUB_CALLBACK_URL environment variables.'
+      );
     }
   }
 
@@ -60,6 +74,7 @@ export class GitHubOAuthService {
    * Generate OAuth authorization URL
    */
   generateAuthUrl(state: string): string {
+    this.ensureConfigured();
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: this.callbackUrl,
@@ -75,6 +90,7 @@ export class GitHubOAuthService {
    * Exchange authorization code for access token
    */
   async exchangeCodeForToken(code: string): Promise<GitHubTokenResponse> {
+    this.ensureConfigured();
     try {
       const response = await axios.post<GitHubTokenResponse>(
         'https://github.com/login/oauth/access_token',
@@ -219,8 +235,9 @@ export class GitHubOAuthService {
       return;
     }
 
-    // Revoke token on GitHub
-    try {
+    // Revoke token on GitHub (only if configured)
+    if (this.isConfigured()) {
+      try {
       await axios.delete(
         `https://api.github.com/applications/${this.clientId}/token`,
         {
@@ -233,9 +250,10 @@ export class GitHubOAuthService {
           }
         }
       );
-    } catch (error: any) {
-      console.error('Failed to revoke GitHub token:', error.message);
-      // Continue with local deletion even if revocation fails
+      } catch (error: any) {
+        console.error('Failed to revoke GitHub token:', error.message);
+        // Continue with local deletion even if revocation fails
+      }
     }
 
     // Delete from database
