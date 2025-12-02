@@ -27,7 +27,6 @@ import { useAuth } from '@clerk/clerk-react';
 import { getProjects } from '../api/projects';
 import { useGitHub } from '../hooks/useGitHub';
 import { useAPIAuth } from '../hooks/useAPI';
-import { isElectron } from '../services/electron';
 
 // GitHub-style Contribution Graph Component
 const ContributionGraph = ({ projects }) => {
@@ -338,10 +337,10 @@ const DashboardPage = () => {
 
   // Load projects from backend on mount
   useEffect(() => {
-    if (isElectron() || (isLoaded && isSignedIn)) {
+
       console.log('📂 Loading projects...');
       loadProjects();
-    }
+
   }, [isLoaded, isSignedIn]);
 
   const loadProjects = async () => {
