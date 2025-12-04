@@ -1,4 +1,4 @@
-# Ionix Landing Page
+# Merkle Landing Page
 
 A stunning, feature-rich landing page for a GitHub-based coding platform built with React, Vite, Tailwind CSS v4, WebGL effects, and Clerk authentication with dark theme.
 

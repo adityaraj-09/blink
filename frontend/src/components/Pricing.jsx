@@ -5,8 +5,8 @@ const Pricing = () => {
   return (
     <section className="relative bg-[#020617] bg-bg-dark pt-6 sm:pt-8 md:pt-10 py-6 sm:py-8 md:py-10 overflow-hidden">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-800/20 rounded-full blur-[128px] pointer-events-none"></div>
 
       <div className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[1250px] mx-auto p-4 sm:p-6 pt-8 sm:pt-12 md:pt-15 pb-6 sm:pb-8 md:pb-10 relative z-20 border-[0.5px] border-slate-800/0 rounded-[12px] overflow-hidden">
         
@@ -14,17 +14,17 @@ const Pricing = () => {
         <div className="absolute inset-0 w-full h-full z-0 max-w-[1000px] mx-auto translate-x-1/2 top-1/3 rotate-z-90" style={{ opacity: 1 }}>
           <div className="absolute inset-0 bg-bg-dark"></div>
           <div className="absolute animate-fade-in" style={{ top: '-25%', width: '10%', left: '20%', height: '120%', transform: 'rotate(25deg) translateZ(0px)', transformOrigin: 'center top', zIndex: 1 }}>
-             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-20" style={{ width: '8px', height: '8px', background: 'radial-gradient(circle, rgb(59, 100, 246) 0%, rgba(59, 100, 246, 0.8) 30%, rgba(59, 100, 246, 0.4) 70%, transparent 100%)', borderRadius: '50%', filter: 'blur(0.5px)' }}></div>
+             <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-20" style={{ width: '8px', height: '8px', background: 'radial-gradient(circle, rgb(16, 185, 129) 0%, rgba(16, 185, 129, 0.8) 30%, rgba(16, 185, 129, 0.4) 70%, transparent 100%)', borderRadius: '50%', filter: 'blur(0.5px)' }}></div>
              <div className="absolute top-0 left-0 w-full" style={{ height: '100%', transformOrigin: 'center top' }}>
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 animate-smooth-fade-in" style={{ width: '4%', height: '100%', background: 'linear-gradient(rgba(59, 100, 246, 0.56) 0%, rgba(59, 100, 246, 0) 100%)', filter: 'blur(32px)', mixBlendMode: 'screen' }}></div>
+                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 animate-smooth-fade-in" style={{ width: '4%', height: '100%', background: 'linear-gradient(rgba(16, 185, 129, 0.56) 0%, rgba(16, 185, 129, 0) 100%)', filter: 'blur(32px)', mixBlendMode: 'screen' }}></div>
              </div>
           </div>
-          <div className="absolute top-0 left-0 w-full h-full opacity-15 animate-pulse-slow" style={{ background: 'radial-gradient(at center top, rgba(111, 167, 255, 0.2) 0%, rgba(111, 167, 255, 0) 70%)', filter: 'blur(40px)' }}></div>
+          <div className="absolute top-0 left-0 w-full h-full opacity-15 animate-pulse-slow" style={{ background: 'radial-gradient(at center top, rgba(52, 211, 153, 0.2) 0%, rgba(52, 211, 153, 0) 70%)', filter: 'blur(40px)' }}></div>
         </div>
 
         <div className="text-center sm:mb-20 relative py-3 sm:py-10 pt-5 pb-8 bg-cover bg-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
             Pricing Plans
           </div>
           <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
@@ -54,27 +54,27 @@ const Pricing = () => {
                 <h4 className="text-white text-sm font-medium mb-4 font-dm-sans uppercase tracking-wider">What's included:</h4>
                 <ul className="flex flex-col gap-3">
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-gray-300">Basic AI code completion</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-gray-300">Community support</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-gray-300">5 Projects</span>
                   </li>
                 </ul>
               </div>
               <div className="z-10 select-none">
-                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-[#044fc7] hover:bg-[#0956d4] w-full font-dm-sans border border-blue-500/30 text-blue-400 hover:bg-blue-600/10 hover:border-blue-400/50">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-emerald-600 hover:bg-emerald-500 w-full font-dm-sans border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/10 hover:border-emerald-400/50">
                   <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Start Free</span>
                 </button>
               </div>
@@ -82,10 +82,10 @@ const Pricing = () => {
           </div>
 
           {/* Growth Plan */}
-          <div className="min-h-[692px] relative p-[1px] rounded-[20px] h-auto w-full group transition-all duration-300 bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700">
+          <div className="min-h-[692px] relative p-[1px] rounded-[20px] h-auto w-full group transition-all duration-300 bg-gradient-to-b from-emerald-500 via-emerald-600 to-emerald-700">
             <div className="w-full h-full rounded-[19px] relative flex flex-col p-8 bg-bg-dark/90 backdrop-blur-xl border border-white/10">
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <div className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-full font-dm-sans shadow-lg">Most Popular</div>
+                <div className="px-3 py-1 bg-emerald-600 text-white text-xs font-medium rounded-full font-dm-sans shadow-lg">Most Popular</div>
               </div>
               <h3 className="text-white text-xl font-bold mb-2 font-clash-display">Pro</h3>
               <p className="text-gray-300 text-sm mb-6 font-dm-sans leading-relaxed">Advanced AI models and features for professional developers.</p>
@@ -101,33 +101,33 @@ const Pricing = () => {
                 <h4 className="text-white text-sm font-medium mb-4 font-dm-sans uppercase tracking-wider">What's included:</h4>
                 <ul className="flex flex-col gap-3">
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Advanced AI models (GPT-4, Claude 3)</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Unlimited Projects</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Priority Support</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Early access to new features</span>
                   </li>
                 </ul>
               </div>
               <div className="z-10 select-none">
-                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg shadow-blue-600/25 w-full font-dm-sans">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-600/25 w-full font-dm-sans">
                   <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Get Started</span>
                 </button>
               </div>
@@ -151,33 +151,33 @@ const Pricing = () => {
                 <h4 className="text-white text-sm font-medium mb-4 font-dm-sans uppercase tracking-wider">What's included:</h4>
                 <ul className="flex flex-col gap-3">
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Everything in Pro</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Team collaboration tools</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">Admin dashboard</span>
                   </li>
                   <li className="flex items-start">
-                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-blue-600/20 flex items-center justify-center mr-3 mt-0.5">
-                      <Check className="h-3 w-3 text-blue-400" />
+                    <div className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-600/20 flex items-center justify-center mr-3 mt-0.5">
+                      <Check className="h-3 w-3 text-emerald-400" />
                     </div>
                     <span className="text-sm font-dm-sans text-white font-medium">SSO & Security features</span>
                   </li>
                 </ul>
               </div>
               <div className="z-10 select-none">
-                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-[#044fc7] hover:bg-[#0956d4] w-full font-dm-sans border border-blue-500/30 text-blue-400 hover:bg-blue-600/10 hover:border-blue-400/50">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-emerald-600 hover:bg-emerald-500 w-full font-dm-sans border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/10 hover:border-emerald-400/50">
                   <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">Contact Sales</span>
                 </button>
               </div>

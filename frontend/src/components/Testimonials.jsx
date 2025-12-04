@@ -26,17 +26,17 @@ const Testimonials = () => {
   return (
     <section className="bg-[#020617] relative select-none overflow-hidden py-12 sm:py-16 md:py-20">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-800/20 rounded-full blur-[128px] pointer-events-none"></div>
 
       <div className="max-w-[95vw] sm:max-w-[90vw] md:max-w-[1250px] mx-auto px-4 sm:px-6 relative overflow-hidden z-20 border-[0.5px] border-slate-800/0 rounded-[12px]">
         
         {/* Background Effects */}
-        <div className="absolute w-[200px] sm:w-[280px] md:w-[380px] h-[200px] sm:h-[280px] md:h-[380px] translate-y-[70%] -z-1 -translate-x-1/2 rounded-full bottom-0 left-1/2 opacity-40 sm:opacity-60" style={{ background: 'radial-gradient(circle, rgba(10, 51, 117, 0.1) 0%, rgb(10, 51, 117) 50%, transparent 100%)', filter: 'blur(120px)' }}></div>
+        <div className="absolute w-[200px] sm:w-[280px] md:w-[380px] h-[200px] sm:h-[280px] md:h-[380px] translate-y-[70%] -z-1 -translate-x-1/2 rounded-full bottom-0 left-1/2 opacity-40 sm:opacity-60" style={{ background: 'radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgb(16, 185, 129) 50%, transparent 100%)', filter: 'blur(120px)' }}></div>
         
         <div className="text-center sm:mb-20 relative py-3 sm:py-10 pt-5 pb-8 bg-cover bg-center mb-9">
-          <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+          <div className="inline-flex items-center px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
             Testimonials
           </div>
           <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">

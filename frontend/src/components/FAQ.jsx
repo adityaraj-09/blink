@@ -16,7 +16,7 @@ const FAQ = () => {
   const faqs = [
     {
       question: "How do I start tracking users on my website?",
-      answer: "Ionix is a GitHub-based coding platform that streamlines your development workflow. Simply connect your GitHub account, choose a repository, and start coding with our powerful in-browser editor.",
+      answer: "Merkle is a GitHub-based coding platform that streamlines your development workflow. Simply connect your GitHub account, choose a repository, and start coding with our powerful in-browser editor.",
       category: "tracking"
     },
     {
@@ -26,12 +26,12 @@ const FAQ = () => {
     },
     {
       question: "Can I upgrade or downgrade my plan anytime?",
-      answer: "Yes! Ionix works seamlessly with all your existing GitHub repositories. You can import any public or private repository, and all changes you make are automatically synced back to GitHub.",
+      answer: "Yes! Merkle works seamlessly with all your existing GitHub repositories. You can import any public or private repository, and all changes you make are automatically synced back to GitHub.",
       category: "pricing"
     },
     {
       question: "How accurate is the user tracking data?",
-      answer: "Ionix supports all major programming languages including JavaScript, TypeScript, Python, Java, Go, Rust, and more. Our intelligent environment detection automatically configures your workspace.",
+      answer: "Merkle supports all major programming languages including JavaScript, TypeScript, Python, Java, Go, Rust, and more. Our intelligent environment detection automatically configures your workspace.",
       category: "analytics"
     }
   ];
@@ -39,22 +39,22 @@ const FAQ = () => {
   return (
     <section id="faq" className="relative bg-[#020617] w-full bg-bg-dark py-6 sm:py-8 md:py-10 overflow-hidden">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-800/20 rounded-full blur-[128px] pointer-events-none"></div>
 
       <div className="bg-gradient-to-br from-slate-900/0 via-bg-dark to-slate-900/30 min-h-auto sm:min-h-[1075px] relative overflow-hidden z-10 container py-8 sm:py-12 md:py-15 mx-auto max-w-[95vw] sm:max-w-[90vw] md:max-w-[1250px] px-4 sm:px-6 border-[0.5px] border-slate-800/0 rounded-[12px] backdrop-blur-sm">
         
         {/* Background Elements */}
         <div className="absolute z-1 bottom-0 translate-y-[80%] -translate-x-1/2 left-1/2 w-[356px] h-[356px] opacity-60 pointer-events-none">
           <div className="relative w-full h-full">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-full mix-blend-overlay blur-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-teal-600/20 rounded-full mix-blend-overlay blur-3xl"></div>
           </div>
         </div>
 
         <div className="relative">
           <div className="text-center sm:mb-20 relative py-3 sm:py-10 pt-5 pb-8 bg-cover bg-center">
-            <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            <div className="inline-flex items-center px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
             Frequently Asked Questions
           </div>
             <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
@@ -64,14 +64,14 @@ const FAQ = () => {
               Everything you need to know about our platform, pricing, and how to get started.
             </p>
           </div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 sm:w-60 md:w-72 h-48 sm:h-60 md:h-72 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 sm:w-60 md:w-72 h-48 sm:h-60 md:h-72 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
         </div>
 
         {/* Search Bar */}
         <div className="mt-6 sm:mt-8 mb-8 sm:mb-10 relative z-20">
           <div className="w-full max-w-full sm:max-w-lg mx-auto px-2 sm:px-0">
             <div className="relative">
-              <div className="flex-grow basis-0 h-[42px] bg-slate-900/20 backdrop-blur-sm rounded-xl border border-slate-800/50 shadow-[0px_1px_4px_0px_rgba(0,0,0,0.18)] relative hover:border-slate-700/50 focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all duration-200 w-full pl-10 sm:pl-6 text-sm sm:text-base">
+              <div className="flex-grow basis-0 h-[42px] bg-slate-900/20 backdrop-blur-sm rounded-xl border border-slate-800/50 shadow-[0px_1px_4px_0px_rgba(0,0,0,0.18)] relative hover:border-slate-700/50 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/30 transition-all duration-200 w-full pl-10 sm:pl-6 text-sm sm:text-base">
                 <input
                   className="w-full h-full px-4 bg-transparent outline-none text-gray-200 text-[14px] tracking-[0.98px] font-light rounded-xl placeholder:text-gray-400 placeholder:font-light font-dm-sans"
                   placeholder="Search questions..."
@@ -131,7 +131,7 @@ const FAQ = () => {
                   {faq.question}
                 </h3>
                 <span className="flex items-center ml-2 sm:ml-4 flex-shrink-0">
-                  <span className="hidden sm:block text-xs px-3 py-1 rounded-full mr-3 bg-blue-600/20 text-blue-300 border border-blue-500/30 font-dm-sans">
+                  <span className="hidden sm:block text-xs px-3 py-1 rounded-full mr-3 bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 font-dm-sans">
                     {faq.category}
                   </span>
                   <div className={`flex items-center justify-center h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-slate-800/50 transition-transform duration-200 ${openIndex === index ? 'rotate-180' : ''}`}>

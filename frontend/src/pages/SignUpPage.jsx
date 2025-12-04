@@ -11,8 +11,8 @@ const SignUpPage = () => {
         
         {/* Background Gradients for the container */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-            <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-600/10 rounded-full blur-[100px]"></div>
-            <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px]"></div>
+            <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-emerald-600/10 rounded-full blur-[100px]"></div>
+            <div className="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px]"></div>
         </div>
 
         {/* Left Side - Image */}
@@ -37,7 +37,7 @@ const SignUpPage = () => {
             
             <div className="flex gap-3 mt-12">
                <div className="w-2 h-1.5 bg-white/20 rounded-full"></div>
-               <div className="w-12 h-1.5 bg-blue-500 rounded-full"></div>
+               <div className="w-12 h-1.5 bg-emerald-500 rounded-full"></div>
                <div className="w-2 h-1.5 bg-white/20 rounded-full"></div>
             </div>
           </div>
@@ -58,30 +58,30 @@ const SignUpPage = () => {
                 Create Account
                 </h1>
                 <p className="text-gray-400 text-base">
-                Already have an account? <Link to="/sign-in" className="text-blue-400 hover:text-blue-300 font-medium transition-colors">Log in</Link>
+                Already have an account? <Link to="/sign-in" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">Log in</Link>
                 </p>
              </div>
 
-             <SignUp 
+             <SignUp
                appearance={{
                  baseTheme: dark,
                  elements: {
                    rootBox: "w-full",
-                
+
                    header: "hidden",
                    footer: "hidden",
-                   
-                   formButtonPrimary: "bg-blue-600 hover:bg-blue-500 text-white normal-case text-[15px] py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-blue-600/20",
-                   formFieldInput: "bg-[#0f1318] border-white/10 text-white rounded-xl focus:border-blue-500 focus:ring-blue-500/20 py-3 px-4 transition-all duration-300",
+
+                   formButtonPrimary: "bg-emerald-600 hover:bg-emerald-500 text-white normal-case text-[15px] py-3.5 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-600/20",
+                   formFieldInput: "bg-[#0f1318] border-white/10 text-white rounded-xl focus:border-emerald-500 focus:ring-emerald-500/20 py-3 px-4 transition-all duration-300",
                    formFieldLabel: "text-gray-400 text-sm font-medium mb-1.5",
                    socialButtonsBlockButton: "bg-white/5 border border-white/10 text-white hover:bg-white/10 rounded-xl py-3 transition-all duration-300",
                    socialButtonsBlockButtonText: "font-medium",
                    dividerLine: "bg-white/10",
                    dividerText: "text-gray-500 text-sm",
-                   formFieldAction: "text-blue-400 hover:text-blue-300 text-sm font-medium",
+                   formFieldAction: "text-emerald-400 hover:text-emerald-300 text-sm font-medium",
                    alert: "bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl",
                    identityPreviewText: "text-gray-300",
-                   identityPreviewEditButton: "text-blue-400 hover:text-blue-300"
+                   identityPreviewEditButton: "text-emerald-400 hover:text-emerald-300"
                  }
                }}
              />

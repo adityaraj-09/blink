@@ -22,14 +22,14 @@ const Stats = () => {
   return (
     <section className="relative bg-[#020617] py-12 sm:py-12 md:py-16 lg:py-20 overflow-hidden mx-auto border-[0.5px] border-slate-800/0 rounded-xl">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-800/20 rounded-full blur-[128px] pointer-events-none"></div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-6">
         <div className="relative z-10">
           <div className="text-center sm:mb-20 relative py-3 sm:py-10">
-            <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
-              <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            <div className="inline-flex items-center px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6 backdrop-blur-sm">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
               Proven Results
             </div>
             <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">

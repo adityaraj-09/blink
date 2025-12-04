@@ -180,6 +180,23 @@ const CodeMirrorEditorWithInlineEdit = ({
   const viewRef = useRef(null);
   const promptButtonRef = useRef(null);
   
+  // Use refs to store filePath and projectId to avoid stale closures
+  const filePathRef = useRef(filePath);
+  const projectIdRef = useRef(projectId);
+  
+  // Refs for callbacks to avoid circular dependencies
+  const handleInlineEditSubmitRef = useRef(null);
+  const handleInlineEditCancelRef = useRef(null);
+  
+  // Keep refs in sync with props
+  useEffect(() => {
+    filePathRef.current = filePath;
+  }, [filePath]);
+  
+  useEffect(() => {
+    projectIdRef.current = projectId;
+  }, [projectId]);
+  
   // Use a ref to store active edit context to avoid stale closures in callbacks
   const activeEditContextRef = useRef({
     active: false,
@@ -267,13 +284,22 @@ const CodeMirrorEditorWithInlineEdit = ({
     });
 
     // Dispatch effect to show widget
+    // Use refs to get latest callbacks (avoid circular dependency)
+    const submitHandler = handleInlineEditSubmitRef.current;
+    const cancelHandler = handleInlineEditCancelRef.current;
+    
+    if (!submitHandler || !cancelHandler) {
+      console.warn('[InlineEdit] Callbacks not initialized yet');
+      return;
+    }
+    
     view.dispatch({
       effects: showInlineEditEffect.of({
         pos: widgetPos,
         props: {
           selectedText,
-          onSubmit: handleInlineEditSubmit,
-          onCancel: handleInlineEditCancel,
+          onSubmit: submitHandler,
+          onCancel: cancelHandler,
           isLoading: false,
           error: null,
           suggestion: null,
@@ -291,7 +317,14 @@ const CodeMirrorEditorWithInlineEdit = ({
   const handleInlineEditSubmit = useCallback(
     async (instruction) => {
       const view = viewRef.current;
-      if (!view || !projectId || !filePath) return;
+      // Use refs to get current values (always up-to-date, even if widget was created with old closure)
+      const currentProjectId = projectIdRef.current;
+      const currentFilePath = filePathRef.current;
+      
+      if (!view || !currentProjectId || !currentFilePath) {
+        console.warn('[InlineEdit] Missing projectId or filePath:', { currentProjectId, currentFilePath });
+        return;
+      }
 
       // Use ref for current context
       const context = activeEditContextRef.current;
@@ -299,13 +332,17 @@ const CodeMirrorEditorWithInlineEdit = ({
       setInlineEditState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       // Update widget to show loading
+      // Use refs to get latest callbacks
+      const submitHandler = handleInlineEditSubmitRef.current;
+      const cancelHandler = handleInlineEditCancelRef.current;
+      
       view.dispatch({
         effects: showInlineEditEffect.of({
           pos: context.endPos,
           props: {
             selectedText: context.selectedText,
-            onSubmit: handleInlineEditSubmit,
-            onCancel: handleInlineEditCancel,
+            onSubmit: submitHandler || handleInlineEditSubmit,
+            onCancel: cancelHandler || handleInlineEditCancel,
             isLoading: true,
             error: null,
             suggestion: null,
@@ -317,10 +354,11 @@ const CodeMirrorEditorWithInlineEdit = ({
       });
 
       try {
-        // Call inline edit API
+        // Call inline edit API - use refs to ensure correct filePath
+        console.log('[InlineEdit] Sending request with filePath:', currentFilePath);
         const response = await getInlineEdit({
-          projectId,
-          filePath,
+          projectId: currentProjectId,
+          filePath: currentFilePath,
           selectedCode: context.selectedText,
           instruction,
           startLine: context.startLine,
@@ -355,18 +393,22 @@ const CodeMirrorEditorWithInlineEdit = ({
         }));
 
         // Update widget with suggestion
+        // Use refs to get latest callbacks
+        const submitHandler = handleInlineEditSubmitRef.current;
+        const cancelHandler = handleInlineEditCancelRef.current;
+        
         view.dispatch({
           effects: showInlineEditEffect.of({
             pos: context.endPos,
             props: {
               selectedText: context.selectedText,
-              onSubmit: handleInlineEditSubmit,
-              onCancel: handleInlineEditCancel,
+              onSubmit: submitHandler || handleInlineEditSubmit,
+              onCancel: cancelHandler || handleInlineEditCancel,
               isLoading: false,
               error: null,
               suggestion: response,
               onAccept: () => handleAcceptEdit(response),
-              onReject: handleInlineEditCancel,
+              onReject: cancelHandler || handleInlineEditCancel,
               language,
             },
           }),
@@ -380,13 +422,17 @@ const CodeMirrorEditorWithInlineEdit = ({
         }));
 
         // Update widget with error
+        // Use refs to get latest callbacks
+        const submitHandler = handleInlineEditSubmitRef.current;
+        const cancelHandler = handleInlineEditCancelRef.current;
+        
         view.dispatch({
           effects: showInlineEditEffect.of({
             pos: context.endPos,
             props: {
               selectedText: context.selectedText,
-              onSubmit: handleInlineEditSubmit,
-              onCancel: handleInlineEditCancel,
+              onSubmit: submitHandler || handleInlineEditSubmit,
+              onCancel: cancelHandler || handleInlineEditCancel,
               isLoading: false,
               error: error.message || 'Failed to generate suggestion',
               suggestion: null,
@@ -398,8 +444,13 @@ const CodeMirrorEditorWithInlineEdit = ({
         });
       }
     },
-    [projectId, filePath, language]
+    [language] // Only depend on language, use refs for projectId and filePath
   );
+  
+  // Keep callback refs in sync
+  useEffect(() => {
+    handleInlineEditSubmitRef.current = handleInlineEditSubmit;
+  }, [handleInlineEditSubmit]);
 
   /**
    * Handle accepting edit
@@ -551,6 +602,11 @@ const CodeMirrorEditorWithInlineEdit = ({
       suggestion: null,
     });
   }, []);
+  
+  // Keep callback refs in sync
+  useEffect(() => {
+    handleInlineEditCancelRef.current = handleInlineEditCancel;
+  }, [handleInlineEditCancel]);
 
   // Initialize editor
   useEffect(() => {

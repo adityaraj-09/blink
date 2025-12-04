@@ -7,8 +7,8 @@ const CTA = () => {
       <div className="relative z-10 flex flex-col">
         <div className="relative flex justify-center align-middle items-center" >
           <div className="text-center sm:mb-20 relative py-3 sm:py-10 pt-5 pb-8 bg-cover bg-center mb-0">
-            <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-sm font-medium mb-6 backdrop-blur-sm">
-            <span className="flex h-2 w-2 rounded-full bg-blue-400 mr-2 animate-pulse"></span>
+            <div className="inline-flex items-center px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm font-medium mb-6 backdrop-blur-sm">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span>
             Global Scale
           </div>
             <h2 className="text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-normal mb-4 sm:mb-6 relative z-10 font-clash-display leading-tight">
@@ -37,14 +37,14 @@ const CTA = () => {
                 </defs>
                 {/* Simulated Map Points */}
                 {[
-                  { cx: 72, cy: 30 }, { cx: 141, cy: 130 }, { cx: 298, cy: 252 }, 
+                  { cx: 72, cy: 30 }, { cx: 141, cy: 130 }, { cx: 298, cy: 252 },
                   { cx: 576, cy: 154 }, { cx: 697, cy: 121 }, { cx: 486, cy: 220 },
                   { cx: 408, cy: 114 }, { cx: 408, cy: 155 }, { cx: 200, cy: 80 },
                   { cx: 650, cy: 300 }, { cx: 100, cy: 300 }, { cx: 750, cy: 100 }
                 ].map((point, i) => (
                   <g key={i}>
-                    <circle cx={point.cx} cy={point.cy} r="2" fill="#3b82f6" filter="url(#glow)"></circle>
-                    <circle cx={point.cx} cy={point.cy} r="8" fill="#3b82f6" opacity="0.3">
+                    <circle cx={point.cx} cy={point.cy} r="2" fill="#10b981" filter="url(#glow)"></circle>
+                    <circle cx={point.cx} cy={point.cy} r="8" fill="#10b981" opacity="0.3">
                       <animate attributeName="r" from="2" to="12" dur={`${2 + i%3}s`} begin={`${i%2}s`} repeatCount="indefinite"></animate>
                       <animate attributeName="opacity" from="0.6" to="0" dur={`${2 + i%3}s`} begin={`${i%2}s`} repeatCount="indefinite"></animate>
                     </circle>
@@ -64,20 +64,20 @@ const CTA = () => {
                     Start Building Today
                   </h3>
                   <p className="text-gray-300 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed font-normal">
-                    Join <span className="font-medium text-blue-300">4,000+</span> startups using our platform to grow smarter.
+                    Join <span className="font-medium text-emerald-300">4,000+</span> startups using our platform to grow smarter.
                   </p>
                   
                   <div className="space-y-4">
                     <SignedOut>
                       <SignInButton mode="modal">
-                        <button className="relative inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full transition-all cursor-pointer bg-blue-600 hover:bg-blue-700 w-full text-white font-medium shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transform hover:-translate-y-0.5">
+                        <button className="relative inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-500 w-full text-white font-medium shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 transform hover:-translate-y-0.5">
                           <span>Get Started Free</span>
                           <ArrowRight className="w-4 h-4" />
                         </button>
                       </SignInButton>
                     </SignedOut>
                     <SignedIn>
-                      <button className="relative inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full transition-all cursor-pointer bg-blue-600 hover:bg-blue-700 w-full text-white font-medium shadow-lg shadow-blue-900/20 hover:shadow-blue-900/40 transform hover:-translate-y-0.5">
+                      <button className="relative inline-flex items-center justify-center gap-2 px-4 py-3 rounded-full transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-500 w-full text-white font-medium shadow-lg shadow-emerald-900/20 hover:shadow-emerald-900/40 transform hover:-translate-y-0.5">
                         <span>Go to Dashboard</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>

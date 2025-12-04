@@ -28,7 +28,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <Code2 className="w-8 h-8 text-gray-400" />
-            <span className="text-xl font-bold">Ionix</span>
+            <span className="text-xl font-bold">Merkle</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -54,10 +54,10 @@ const Navbar = () => {
                 <div className="hidden md:flex items-center space-x-4">
                 <SignedOut>
                   <Link to="/sign-in">
-                  <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] 
+                  <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px]
                     rounded-[30px] transition-colors cursor-pointer
                     before:content-[''] before:absolute before:-top-[1px] before:-left-[1px] before:-z-[1] before:w-[calc(100%+2px)] before:h-[calc(100%+2px)] before:rounded-[30px] before:p-[1px]
-                    bg-[#044fc7] hover:bg-[#0956d4] before:bg-gradient-to-b before:from-[#598ffa] before:to-[#044fc7]"
+                    bg-emerald-600 hover:bg-emerald-500 before:bg-gradient-to-b before:from-emerald-400 before:to-emerald-600"
                     style={{ backgroundImage: 'linear-gradient(rgba(108, 108, 108, 0.15), transparent)' }}>
                     <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white [text-shadow:0px_0px_0.5px_#ffffff]">
                     Sign In
@@ -67,10 +67,10 @@ const Navbar = () => {
                 </SignedOut>
                 <SignedIn>
                   <Link to="/dashboard">
-                  <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] 
+                  <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px]
                     rounded-[30px] transition-colors cursor-pointer
                     before:content-[''] before:absolute before:-top-[1px] before:-left-[1px] before:-z-[1] before:w-[calc(100%+2px)] before:h-[calc(100%+2px)] before:rounded-[30px] before:p-[1px]
-                    bg-[#044fc7] hover:bg-[#0956d4] before:bg-gradient-to-b before:from-[#598ffa] before:to-[#044fc7]"
+                    bg-emerald-600 hover:bg-emerald-500 before:bg-gradient-to-b before:from-emerald-400 before:to-emerald-600"
                     style={{ backgroundImage: 'linear-gradient(rgba(108, 108, 108, 0.15), transparent)' }}>
                     <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white [text-shadow:0px_0px_0.5px_#ffffff]">
                     Dashboard

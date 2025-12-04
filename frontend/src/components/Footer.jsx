@@ -4,17 +4,17 @@ const Footer = () => {
   return (
     <footer className="bg-[#020617] border-t border-slate-800/60 pt-16 sm:pt-24 pb-0 relative overflow-hidden">
       {/* Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-[128px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-900/20 rounded-full blur-[128px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-800/20 rounded-full blur-[128px] pointer-events-none"></div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12 sm:mb-16">
           <div className="col-span-2 lg:col-span-2">
             <a href="/" className="flex items-center space-x-2 mb-6">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">I</span>
               </div>
-              <span className="text-white font-bold text-xl tracking-tight">Ionix</span>
+              <span className="text-white font-bold text-xl tracking-tight">Merkle</span>
             </a>
             <p className="text-gray-400 text-sm leading-relaxed max-w-xs mb-6">
               Empowering developers to build the future with cutting-edge tools and a supportive community.
@@ -69,7 +69,7 @@ const Footer = () => {
             <h3 className="font-medium text-gray-100 text-sm uppercase tracking-wider mb-3 text-center">Stay Updated</h3>
             <p className="text-gray-300 text-sm mb-4 text-center">Get the latest updates, templates, and design insights.</p>
             <div className="flex gap-3 w-full max-w-md flex-col sm:flex-row">
-              <div className="flex-grow basis-0 h-[42px] bg-slate-900/20 backdrop-blur-sm rounded-xl border border-slate-800/50 shadow-[0px_1px_4px_0px_rgba(0,0,0,0.18)] relative hover:border-slate-700/50 focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/30 transition-all duration-200 flex-1">
+              <div className="flex-grow basis-0 h-[42px] bg-slate-900/20 backdrop-blur-sm rounded-xl border border-slate-800/50 shadow-[0px_1px_4px_0px_rgba(0,0,0,0.18)] relative hover:border-slate-700/50 focus-within:border-emerald-500/50 focus-within:ring-1 focus-within:ring-emerald-500/30 transition-all duration-200 flex-1">
                 <input
                   className="w-full h-full px-4 bg-transparent outline-none text-gray-200 text-[14px] tracking-[0.98px] font-light rounded-xl placeholder:text-gray-400 placeholder:font-light font-dm-sans"
                   placeholder="Enter your email"
@@ -77,7 +77,7 @@ const Footer = () => {
                 />
               </div>
               <div className="z-10 select-none">
-                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-[#044fc7] hover:bg-[#0956d4] w-full sm:w-auto">
+                <button type="button" className="relative inline-flex items-center justify-center gap-2 px-4 py-[9px] rounded-[30px] transition-colors cursor-pointer bg-emerald-600 hover:bg-emerald-500 w-full sm:w-auto">
                   <span className="relative w-fit font-normal text-[14px] leading-[20px] whitespace-nowrap flex items-center gap-2 transition-colors text-white">
                     Subscribe
                   </span>
@@ -88,7 +88,7 @@ const Footer = () => {
         </div>
 
         <div className="pt-8 border-t border-slate-700/60 flex flex-col md:flex-row justify-between items-center gap-4 pb-8">
-          <p className="text-gray-400 text-sm">© 2025 Ionix. All rights reserved.</p>
+          <p className="text-gray-400 text-sm">© 2025 Merkle. All rights reserved.</p>
           <div className="flex items-center gap-6 text-sm">
             <span className="text-gray-400">Made with ❤️ for developers</span>
           </div>
