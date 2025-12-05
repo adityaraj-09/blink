@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../components/DashboardLayout.jsx';
 import GitHubImportModal from '../components/GitHubImportModal.jsx';
 import CreateProjectModal from '../components/CreateProjectModal.jsx';
+import ZipImportModal from '../components/ZipImportModal.jsx';
 import IngestionProgressModal from '../components/IngestionProgressModal.jsx';
 import {
   FolderGit2,
@@ -20,7 +21,8 @@ import {
   Zap,
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  FileArchive
 } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@clerk/clerk-react';
@@ -213,6 +215,7 @@ const QuickActionCard = ({ icon: Icon, title, description, onClick, color = 'eme
   const colors = {
     emerald: 'hover:border-emerald-500/50 group-hover:text-emerald-400 group-hover:bg-emerald-500/10',
     purple: 'hover:border-purple-500/50 group-hover:text-purple-400 group-hover:bg-purple-500/10',
+    orange: 'hover:border-orange-500/50 group-hover:text-orange-400 group-hover:bg-orange-500/10',
   };
 
   return (
@@ -278,6 +281,7 @@ const DashboardPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showZipModal, setShowZipModal] = useState(false);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -383,6 +387,16 @@ const DashboardPage = () => {
     setShowCreateModal(false);
     loadProjects();
     navigate(`/dashboard/projects/${project.projectId}`);
+  };
+
+  const handleZipImportSuccess = (projectData) => {
+    console.log('ZIP import started:', projectData);
+    setShowZipModal(false);
+    setImportingProject({
+      projectId: projectData.projectId,
+      projectName: projectData.projectName || 'ZIP Import'
+    });
+    loadProjects();
   };
 
   const handleCloseProgressModal = () => {
@@ -493,13 +507,20 @@ const DashboardPage = () => {
       {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <QuickActionCard
             icon={Github}
             title="Import from GitHub"
             description="Connect and import your repositories"
             onClick={() => setShowGitHubModal(true)}
             color="emerald"
+          />
+          <QuickActionCard
+            icon={FileArchive}
+            title="Import from ZIP"
+            description="Upload a ZIP file to create a project"
+            onClick={() => setShowZipModal(true)}
+            color="orange"
           />
           <QuickActionCard
             icon={Plus}
@@ -583,6 +604,13 @@ const DashboardPage = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreateSuccess={handleCreateSuccess}
+      />
+
+      {/* ZIP Import Modal */}
+      <ZipImportModal
+        isOpen={showZipModal}
+        onClose={() => setShowZipModal(false)}
+        onImportSuccess={handleZipImportSuccess}
       />
 
       {/* Ingestion Progress Modal */}

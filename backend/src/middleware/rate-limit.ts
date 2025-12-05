@@ -29,7 +29,7 @@ export const createRateLimiter = (options: {
 }) => {
   const {
     windowMs = 15 * 60 * 1000, // 15 minutes
-    max = 100, // Limit each user/IP to 100 requests per windowMs
+    max = 1000, // Limit each user/IP to 1000 requests per windowMs
     message = 'Too many requests, please try again later',
   } = options;
 

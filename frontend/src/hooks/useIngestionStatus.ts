@@ -22,6 +22,7 @@ export interface ImportStatus {
 /**
  * Hook to poll ingestion status for a project
  * Automatically stops polling when ingestion is complete or failed
+ * Supports both GitHub imports and ZIP imports
  */
 export function useIngestionStatus(projectId: string | null, enabled: boolean = true) {
   const [status, setStatus] = useState<ImportStatus | null>(null);
@@ -34,9 +35,24 @@ export function useIngestionStatus(projectId: string | null, enabled: boolean = 
 
     try {
       const apiClient = getAPIClient();
-      const response = await apiClient.get<ImportStatus>(
-        `/api/github/import/status/${projectId}`
-      );
+
+      // Try GitHub import status first, then fall back to ZIP import status
+      let response: ImportStatus;
+      try {
+        response = await apiClient.get<ImportStatus>(
+          `/api/github/import/status/${projectId}`
+        );
+      } catch (githubErr: any) {
+        // If GitHub status fails (e.g., no repo linked), try ZIP import status
+        try {
+          response = await apiClient.get<ImportStatus>(
+            `/api/zip/import/status/${projectId}`
+          );
+        } catch (zipErr: any) {
+          // Both failed, throw the original error
+          throw githubErr;
+        }
+      }
 
       setStatus(response);
       setError(null);

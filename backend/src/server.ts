@@ -55,14 +55,13 @@ import { createGitHubRoutes } from './routes/github';
 import { createGitHubFileRoutes } from './routes/githubFiles';
 import { createAIEditRoutes } from './routes/aiEdit';
 import { createProgressiveEditRoutes } from './routes/progressiveEdit';
-import { createJobStreamRoutes } from './routes/jobStream';
+
 import { createUsersRouter } from './routes/users';
-import { JobWorker } from './services/JobWorker';
-// New routes for local projects and custom chat
-import { createLocalProjectRoutes } from './routes/localProjects';
-import { createLocalIngestRoutes } from './routes/localIngest';
+
+
 import { createCustomChatRoutes } from './routes/customChat';
 import { createElectronAuthRoutes } from './routes/electronAuth';
+import { createZipImportRoutes } from './routes/zipImport';
 
 // Configuration
 const PORT = parseInt(process.env.PORT || '3000');
@@ -188,53 +187,6 @@ const repoSyncService = new RepoSyncService(db, githubAuth, fileIngestionService
 let aiCodeChatService: AICodeChatService | null = null;
 let progressiveEditService: ProgressiveEditService | null = null;
 
-if (aiProvider === 'gemini') {
-  const geminiEmbeddings = embeddings as GeminiEmbeddingService;
-
-  aiCodeChatService = new AICodeChatService(
-    db,
-    chroma,
-    geminiEmbeddings,
-    fileEditService,
-    repoSyncService,
-    githubAuth,
-    
-  );
-  log.info('✓ AI Code Chat service initialized');
-
-  // Progressive Edit Service
-  const aiCodeEditService = new AICodeEditService(db, fileEditService, repoSyncService);
-  progressiveEditService = new ProgressiveEditService(
-    db,
-    chroma,
-    geminiEmbeddings,
-    aiCodeEditService,
-    fileEditService,
-    githubAuth,
-    {
-      apiKey: process.env.GEMINI_API_KEY || '',
-      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash',
-      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
-      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
-    }
-  );
-  log.info('✓ Progressive Edit service initialized');
-
-  // Job Worker (processes queue in background)
-  const jobWorker = new JobWorker(
-    db,
-    chroma,
-    geminiEmbeddings,
-    aiCodeEditService,
-    {
-      apiKey: process.env.GEMINI_API_KEY || '',
-      model: process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-exp',
-      maxTokens: parseInt(process.env.LLM_MAX_TOKENS || '8192'),
-      temperature: parseFloat(process.env.LLM_TEMPERATURE || '0.1'),
-    }
-  );
-  log.info('✓ Job Worker initialized');
-}
 
 // Create Express app
 const app = express();
@@ -345,14 +297,9 @@ if (progressiveEditService) {
   log.info('✓ Progressive Edit routes registered');
 }
 
-// Job Stream routes (SSE for real-time job progress)
-app.use('/api/jobs', createJobStreamRoutes(db));
-log.info('✓ Job Stream routes registered');
-
-// Local project routes (for opening local folders)
-app.use('/api/local-projects', createLocalProjectRoutes(db));
-app.use('/api/local-ingest', createLocalIngestRoutes(db, fileIngestionService));
-log.info('✓ Local project routes registered');
+// ZIP import routes
+app.use('/api/zip', createZipImportRoutes(db, chroma, ingestionService, fileIngestionService));
+log.info('✓ ZIP import routes registered');
 
 
 const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || 'pk_test_dG91Z2gtbW9ua2Zpc2gtNTMuY2xlcmsuYWNjb3VudHMuZGV2JA';
