@@ -5,6 +5,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth';
 import { apiRateLimiter } from '../middleware/rate-limit';
 import { z } from 'zod';
 import { AIEditRequest, CodeEdit, BatchApplyRequest } from '../types/code-edit';
+import { getAvailableModels, DEFAULT_MODEL_ID } from '../services/llm';
 
 // Validation schemas
 const aiEditRequestSchema = z.object({
@@ -26,7 +27,8 @@ const aiEditRequestSchema = z.object({
       cursorPosition: val.cursorPosition ?? undefined
     };
   }),
-  sessionId: z.string().nullish().transform(val => val ?? undefined)
+  sessionId: z.string().nullish().transform(val => val ?? undefined),
+  modelId: z.string().nullish().transform(val => val ?? undefined)
 });
 
 const validateEditSchema = z.object({
@@ -91,7 +93,33 @@ export function createAIEditRoutes(
   // Apply rate limiting
   router.use(apiRateLimiter);
 
-  // Apply authentication to all routes
+  /**
+   * GET /api/ai/models
+   * Get available LLM models (public endpoint - no auth required)
+   */
+  router.get('/models', async (req, res) => {
+    try {
+      const models = getAvailableModels();
+
+      res.json({
+        success: true,
+        defaultModelId: DEFAULT_MODEL_ID,
+        models: models.map(m => ({
+          id: m.id,
+          name: m.name,
+          provider: m.provider,
+          supportsTools: m.supportsTools,
+          maxTokens: m.maxTokens,
+          contextWindow: m.contextWindow
+        }))
+      });
+    } catch (error: any) {
+      console.error('[AI Models] Failed:', error);
+      res.status(500).json({ error: error.message || 'Failed to get models' });
+    }
+  });
+
+  // Apply authentication to all routes below
   router.use(requireAuth);
 
   /**

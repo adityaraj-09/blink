@@ -4,9 +4,11 @@ import { FileEditService } from './FileEditService';
 import Exa from 'exa-js';
 import * as path from 'path';
 import { DatabaseSchema } from '../database/schema';
+import { OpenAITool, ToolCall } from './llm';
 
 /**
- * Tool definition for Gemini function calling
+ * Tool definition for Gemini function calling (legacy)
+ * @deprecated Use OpenAITool instead
  */
 export interface ToolDefinition {
   name: string;
@@ -47,7 +49,121 @@ export interface ToolContext {
  */
 export class AITools {
   /**
-   * Get all tool definitions for Gemini
+   * Get all tool definitions in OpenAI format (for OpenRouter)
+   */
+  static getOpenAITools(): OpenAITool[] {
+    return [
+      {
+        type: 'function',
+        function: {
+          name: 'search_codebase',
+          description: 'Search the codebase using vector similarity to find relevant code, functions, classes, or implementations. Use when you need to locate specific functionality or understand how something works.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Natural language search query describing what code to find (e.g., "authentication logic", "database connection", "user validation")'
+              },
+              maxResults: {
+                type: 'number',
+                description: 'Number of code chunks to return (default 10, max 20). Use higher numbers for broader understanding.'
+              }
+            },
+            required: ['query']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'read_file',
+          description: 'Read the complete contents of a specific file. Use when you need to see the full implementation, understand file structure, or work with specific code.',
+          parameters: {
+            type: 'object',
+            properties: {
+              filePath: {
+                type: 'string',
+                description: 'Relative path to the file from project root (e.g., "src/services/AuthService.ts")'
+              }
+            },
+            required: ['filePath']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'read_project',
+          description: 'Get an overview of the entire project structure including all files, directories, and a summary of the codebase. Use when you need to understand project architecture, find file locations, or get a holistic view. WARNING: This can return large amounts of data.',
+          parameters: {
+            type: 'object',
+            properties: {
+              includeContent: {
+                type: 'boolean',
+                description: 'If true, includes file contents (WARNING: very large). If false, only shows file tree and metadata (recommended).'
+              },
+              maxDepth: {
+                type: 'number',
+                description: 'Maximum directory depth to traverse (default 10)'
+              },
+              filePattern: {
+                type: 'string',
+                description: 'Optional glob pattern to filter files (e.g., "**/*.ts" for TypeScript files only)'
+              }
+            },
+            required: []
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'search_web',
+          description: 'Search the web using Exa.ai for documentation, libraries, API references, or current information not available in the codebase. ONLY use when user explicitly mentions websites, URLs, documentation, or web-related queries.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Web search query (e.g., "React hooks documentation", "TypeScript generics tutorial")'
+              },
+              numResults: {
+                type: 'number',
+                description: 'Number of results to return (default 5, max 10)'
+              },
+              category: {
+                type: 'string',
+                description: 'Search category: "documentation", "github", "research_paper". Optional field.'
+              }
+            },
+            required: ['query']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_chat_history',
+          description: 'Retrieve previous conversation messages from this session. ONLY use when user explicitly references past discussion (e.g., "as we discussed", "earlier you mentioned", "remember when").',
+          parameters: {
+            type: 'object',
+            properties: {
+              limit: {
+                type: 'number',
+                description: 'Number of recent messages to retrieve (default 5, max 20)'
+              }
+            },
+            required: []
+          }
+        }
+      }
+    ];
+  }
+
+  /**
+   * Get all tool definitions for Gemini (legacy)
+   * @deprecated Use getOpenAITools() instead
    */
   static getToolDefinitions(): ToolDefinition[] {
     return [
@@ -70,56 +186,6 @@ export class AITools {
           required: ['query']
         }
       },
-      // {
-      //   name: 'run_terminal_command',
-      //   description: 'Execute a terminal command in the WebContainer (frontend runtime). Use for running builds, tests, linting, or any shell command. This runs in the browser, not on the backend server. Returns output for frontend display.',
-      //   parameters: {
-      //     type: 'object',
-      //     properties: {
-      //       command: {
-      //         type: 'string',
-      //         description: 'The command to execute (e.g., "npm run build", "ls -la", "cat package.json")'
-      //       },
-      //       cwd: {
-      //         type: 'string',
-      //         description: 'Working directory for command execution (optional, defaults to project root)'
-      //       }
-      //     },
-      //     required: ['command']
-      //   }
-      // },
-      // {
-      //   name: 'install_npm_packages',
-      //   description: 'Install npm packages in the WebContainer. Use when the user wants to add dependencies or when you detect missing packages.',
-      //   parameters: {
-      //     type: 'object',
-      //     properties: {
-      //       packages: {
-      //         type: 'array',
-      //         description: 'Array of package names to install (e.g., ["react", "typescript"]). Leave empty to run "npm install" for all dependencies.',
-      //       },
-      //       dev: {
-      //         type: 'boolean',
-      //         description: 'Install as dev dependencies (--save-dev flag). Default: false'
-      //       }
-      //     },
-      //     required: []
-      //   }
-      // },
-      // {
-      //   name: 'start_dev_server',
-      //   description: 'Start the development server in WebContainer. Use when the user wants to preview their application. Returns server URL when ready.',
-      //   parameters: {
-      //     type: 'object',
-      //     properties: {
-      //       command: {
-      //         type: 'string',
-      //         description: 'Command to start the dev server (e.g., "npm run dev", "npm start"). Defaults to "npm run dev"'
-      //       }
-      //     },
-      //     required: []
-      //   }
-      // },
       {
         name: 'read_file',
         description: 'Read the complete contents of a specific file. Use when you need to see the full implementation, understand file structure, or work with specific code.',
@@ -197,6 +263,17 @@ export class AITools {
         }
       }
     ];
+  }
+
+  /**
+   * Execute a tool from OpenAI-format tool call
+   */
+  static async executeToolCall(
+    toolCall: ToolCall,
+    context: ToolContext
+  ): Promise<ToolResult> {
+    const args = JSON.parse(toolCall.function.arguments);
+    return this.executeTool(toolCall.function.name, args, context);
   }
 
   /**

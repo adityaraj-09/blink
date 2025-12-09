@@ -5,14 +5,22 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, X, Loader, Zap, ListTodo, AlertCircle, RefreshCw, FileText, AtSign, History, MessageSquare, Plus, ChevronDown, Save } from 'lucide-react';
+import { Send, X, Loader, Zap, ListTodo, AlertCircle, RefreshCw, FileText, AtSign, History, MessageSquare, Plus, ChevronDown, Save, Cpu } from 'lucide-react';
 import { useProgressiveEdit } from '../hooks/useProgressiveEdit';
 import InstantEditView from './InstantEditView';
 import ProgressiveEditView from './ProgressiveEditView';
-import { getAIEdits, getChatSessions, getChatMessages } from '../api/aiEdit';
+import { getAIEdits, getChatSessions, getChatMessages, getAvailableModels } from '../api/aiEdit';
 import { syncWithMerkleTree } from '../api/files';
 import { MerkleHasher } from '../services/merkle';
 import { quickSearchFiles } from '../utils/fileSearch';
+
+// Provider colors for visual distinction
+const PROVIDER_COLORS = {
+  google: 'text-blue-400',
+  openai: 'text-green-400',
+  anthropic: 'text-orange-400',
+  deepseek: 'text-purple-400',
+};
 
 const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, onFilesChange, onShowDiffInEditor }) => {
   const [mode, setMode] = useState('instant'); // 'instant' or 'progressive'
@@ -52,6 +60,12 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
   // Mode dropdown
   const [showModeDropdown, setShowModeDropdown] = useState(false);
 
+  // Model selection
+  const [availableModels, setAvailableModels] = useState([]);
+  const [selectedModelId, setSelectedModelId] = useState('google/gemini-2.0-flash');
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [loadingModels, setLoadingModels] = useState(false);
+
   // Progressive edit mode
   const {
     startTask,
@@ -77,6 +91,27 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
   useEffect(() => {
     loadAllSessions();
   }, [projectId]);
+
+  /**
+   * Load available models on mount
+   */
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        setLoadingModels(true);
+        const { models, defaultModelId } = await getAvailableModels();
+        setAvailableModels(models || []);
+        if (defaultModelId) {
+          setSelectedModelId(defaultModelId);
+        }
+      } catch (err) {
+        console.error('[AI Chat] Failed to load models:', err);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+    loadModels();
+  }, []);
 
   /**
    * Load all sessions for this project
@@ -406,6 +441,7 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
         projectId,
         message: userMessage,
         sessionId,
+        modelId: selectedModelId,
       };
 
       // Add file context if user tagged a specific file
@@ -418,6 +454,7 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
       }
 
       console.log('[AI Chat] Sending AI edit request:', JSON.stringify(request, null, 2));
+      console.log('[AI Chat] Using model:', selectedModelId);
 
       // Call AI edit API
       const response = await getAIEdits(request);
@@ -545,6 +582,62 @@ const AIChatPanel = ({ projectId, files: initialFiles, fileContents, onClose, on
             >
               <History size={16} />
             </button>
+
+            {/* Model Selector Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowModelDropdown(!showModelDropdown)}
+                className={`p-2 rounded-lg transition-all hover:scale-105 flex items-center gap-1 ${
+                  showModelDropdown
+                    ? 'bg-[#30363d] text-gray-200'
+                    : 'hover:bg-[#30363d] text-gray-400'
+                }`}
+                title="Select Model"
+              >
+                <Cpu size={16} className={PROVIDER_COLORS[availableModels.find(m => m.id === selectedModelId)?.provider] || 'text-gray-400'} />
+                <ChevronDown size={12} />
+              </button>
+
+              {/* Model Dropdown */}
+              {showModelDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-64 bg-[#161b22] border border-[#30363d] rounded-lg shadow-2xl z-50 max-h-80 overflow-y-auto">
+                  <div className="p-2 border-b border-[#30363d]">
+                    <div className="text-xs text-gray-500 font-medium px-2">Select Model</div>
+                  </div>
+                  {loadingModels ? (
+                    <div className="p-4 text-center">
+                      <Loader size={16} className="animate-spin mx-auto text-gray-500" />
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {availableModels.map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={() => {
+                            setSelectedModelId(model.id);
+                            setShowModelDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 hover:bg-[#30363d] transition-all flex items-center justify-between ${
+                            selectedModelId === model.id ? 'bg-[#30363d]' : ''
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Cpu size={14} className={PROVIDER_COLORS[model.provider]} />
+                            <div>
+                              <div className="text-sm text-gray-200 font-medium">{model.name}</div>
+                              <div className="text-xs text-gray-500">{model.provider}</div>
+                            </div>
+                          </div>
+                          {selectedModelId === model.id && (
+                            <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Save Button (Manual Merkle Sync) */}
             <button

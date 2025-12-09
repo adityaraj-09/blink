@@ -50,6 +50,7 @@ const getLanguageExtension = (language) => {
     java: () => java(),
     plaintext: () => [],
   };
+  
 
   const lang = language?.toLowerCase() || 'plaintext';
   const extension = langMap[lang];

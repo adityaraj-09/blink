@@ -37,7 +37,7 @@
     "install": "^0.13.0",
     "ioredis": "^5.8.2",
     "npm": "^11.6.2",
-    "openai": "^6.7.0",
+    "openai": "^6.10.0",
     "simple-git": "^3.22.0",
     "tree-sitter": "0.21.1",
     "tree-sitter-go": "0.23.4",

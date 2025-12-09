@@ -15,6 +15,7 @@ export interface AIEditRequest {
     cursorPosition?: number;
   };
   sessionId?: string;
+  modelId?: string;
 }
 
 export interface CodeEdit {
@@ -299,4 +300,28 @@ export async function getInlineEdit(request: InlineEditRequest): Promise<InlineE
     originalCode,
     editedCode,
   };
+}
+
+/**
+ * LLM Model configuration
+ */
+export interface LLMModel {
+  id: string;
+  name: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'deepseek';
+  supportsTools: boolean;
+  maxTokens: number;
+  contextWindow: number;
+}
+
+/**
+ * Get available LLM models
+ */
+export async function getAvailableModels(): Promise<{
+  success: boolean;
+  defaultModelId: string;
+  models: LLMModel[];
+}> {
+  const client = getAPIClient();
+  return client.get('/api/ai/models');
 }

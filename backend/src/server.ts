@@ -187,6 +187,21 @@ const repoSyncService = new RepoSyncService(db, githubAuth, fileIngestionService
 let aiCodeChatService: AICodeChatService | null = null;
 let progressiveEditService: ProgressiveEditService | null = null;
 
+// Initialize AI Code Chat Service
+try {
+  aiCodeChatService = new AICodeChatService(
+    db,
+    chroma,
+    embeddings,
+    fileEditService,
+    repoSyncService,
+    githubAuth
+  );
+  log.info('✓ AI Code Chat service initialized');
+} catch (err) {
+  log.error('Failed to initialize AI Code Chat service:', err);
+}
+
 
 // Create Express app
 const app = express();
@@ -285,11 +300,10 @@ app.use('/api/chat', createChatRouter(chatService, db));
 app.use('/api/github', createGitHubRoutes(db, fileIngestionService));
 app.use('/api/projects', createGitHubFileRoutes(db));
 
-// AI Code Editor routes
-if (aiCodeChatService) {
-  app.use('/api/ai', createAIEditRoutes(db, aiCodeChatService));
+
+  app.use('/api/ai', createAIEditRoutes(db, aiCodeChatService!));
   log.info('✓ AI Code Editor routes registered');
-}
+
 
 // Progressive Edit routes
 if (progressiveEditService) {

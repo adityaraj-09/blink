@@ -79,6 +79,7 @@ export interface AIEditRequest {
   };
   applyImmediately?: boolean;       // If true, auto-apply edits
   sessionId?: string;               // For conversation continuity
+  modelId?: string;                 // LLM model to use (e.g., "google/gemini-2.0-flash")
 }
 
 /**

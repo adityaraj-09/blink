@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { ChromaService, SearchResult } from './chroma-service';
 import { GeminiEmbeddingService } from './gemini-embedding-service';
 import { DatabaseSchema } from '../database/schema';
@@ -9,14 +8,22 @@ import { GitHubOAuthService } from './GitHubOAuthService';
 import { AIEditRequest, AIEditResponse, CodeEdit } from '../types/code-edit';
 import { AITools, ToolResult, ToolContext } from './tools';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  OpenRouterClient,
+  createOpenRouterClient,
+  ChatMessage,
+  ToolCall,
+  DEFAULT_MODEL_ID,
+  getModelConfig,
+  modelSupportsTools,
+} from './llm';
 
 /**
  * Enhanced chat service for AI-powered code editing
- * Extends regular chat with structured code edit capabilities
+ * Uses OpenRouter for multi-model support with tool calling
  */
 export class AICodeChatService {
-  private genAI: GoogleGenerativeAI;
-  private model: string;
+  private llmClient: OpenRouterClient;
   private maxTokens: number;
   private temperature: number;
   private aiEditService: AICodeEditService;
@@ -30,8 +37,7 @@ export class AICodeChatService {
     private repoSyncService: RepoSyncService,
     private githubAuth: GitHubOAuthService,
   ) {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    this.model = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-pro';
+    this.llmClient = createOpenRouterClient();
     this.maxTokens = 8192;
     this.temperature = 0.1;
     this.exaApiKey = process.env.EXA_API_KEY || '';
@@ -53,8 +59,15 @@ export class AICodeChatService {
       projectId,
       message,
       fileContext,
-      sessionId: requestSessionId
+      sessionId: requestSessionId,
+      modelId: requestModelId
     } = request;
+
+    // Use requested model or default
+    const modelId = requestModelId || DEFAULT_MODEL_ID;
+    const modelConfig = getModelConfig(modelId);
+
+    console.log(`[AI Chat] Using model: ${modelId}`);
 
     // Get user ID from project
     const ownerId = this.db.getProjectOwnerId(projectId);
@@ -70,38 +83,22 @@ export class AICodeChatService {
       console.log(`[AI Chat] Created new session with title: "${title}"`);
     }
 
-    // ============================================================
-    // PHASE 1: LLM decides which tools to use (lightweight call)
-    // ============================================================
+    // Build tool context
+    const toolContext: ToolContext = {
+      projectId,
+      sessionId,
+      chroma: this.chroma,
+      embeddings: this.embeddings,
+      fileEditService: this.fileEditService,
+      db: this.db,
+      exaApiKey: this.exaApiKey,
+    };
 
-    const toolDefinitions = AITools.getToolDefinitions();
+    // Build initial context
+    let userContext = `User Request: ${message}`;
 
-    const model = this.genAI.getGenerativeModel({
-      model: this.model,
-      tools: [
-        {
-          functionDeclarations: toolDefinitions.map(t => ({
-            name: t.name,
-            description: t.description,
-            parameters: {
-              type:  t.parameters.type as SchemaType,
-              properties: t.parameters.properties,
-              required: t.parameters.required
-            }
-
-          }))
-        }
-      ],
-      generationConfig: {
-        temperature: 0.1,
-      },
-    });
-
-    // Build initial prompt with minimal context
-    let initialContext = `User Request: ${message}`;
-
-    if(fileContext){
-      initialContext+=`\n\nCurrent filePath (${fileContext.filePath})`;
+    if (fileContext) {
+      userContext += `\n\nCurrent filePath (${fileContext.filePath})`;
     }
 
     // Add file context if provided
@@ -113,395 +110,95 @@ export class AICodeChatService {
         relevantCode = lines
           .slice(fileContext.startLine - 1, fileContext.endLine)
           .join('\n');
-        initialContext += `\n\nCurrent Selection (${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}):\n\`\`\`\n${relevantCode}\n\`\`\``;
+        userContext += `\n\nCurrent Selection (${fileContext.filePath}:${fileContext.startLine}-${fileContext.endLine}):\n\`\`\`\n${relevantCode}\n\`\`\``;
       } else {
-        initialContext += `\n\nCurrent File (${fileContext.filePath}):\n\`\`\`\n${fileContext.content}\n\`\`\``;
+        userContext += `\n\nCurrent File (${fileContext.filePath}):\n\`\`\`\n${fileContext.content}\n\`\`\``;
       }
     }
 
-    const initialPrompt = `You are an AI code editor assistant.
+    // Get tools in OpenAI format
+    const tools = AITools.getOpenAITools();
 
-${initialContext}
+    // Build messages array
+    const systemPrompt = this.getSystemPrompt();
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContext }
+    ];
 
-Analyze the user's request and decide which tools (if any) you need to answer effectively. Available tools:
-${toolDefinitions.map(t => `- ${t.name}: ${t.description}`).join('\n')}
-
-Guidelines:
-- You have access to ALL tools - use any combination that helps complete the task
-- if  user's request  is anyway related to the project/codebase, you can use the search_codebase tool.
-- You can and SHOULD call multiple tools if needed for a comprehensive answer
-- Consider using search_codebase to find relevant code context
-- Use read_file to get specific file contents based on the discussion context
-- Use search_web for latest information, libraries, APIs, or best practices
-- Use get_chat_history to reference previous conversation context
-- Prefer specific tools (read_file) over broad ones (read_project) when possible
-
-
-IMPORTANT:
-
-If calling tools, do so now. 
-If no tools are needed follow below guidelines:
-Add some explanation of the code changes/suggestions. and then add the code edit.
-
-Always Use <edit> XML tags for  any code changes/suggestions.Always provide a code edit if the user asks to change code.
-
-<edit file="relative/path/to/file.ts" start="15" end="20" action="replace">
-<old>
-[EXACT OLD CODE from the file - must match exactly]
-</old>
-<new>
-[NEW CODE with your improvements]
-</new>
-</edit>
-
-EDIT TAG RULES:
-1. **action** can be: "create", "replace", "insert", or "delete"
-2. For **create**: Create new file, use <new> tag with entire file content
-3. For **replace**: Include start/end line numbers with <old> and <new> tags
-4. For **insert**: Use "after" attribute (line number), use <new> tag only
-5. For **delete**: Include start/end line numbers, use <old> tag only
-
-EXAMPLES:
-
-**Create New File Example:**
-<edit file="src/types/user.ts" action="create">
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: Date;
-}
-
-export interface UserSession {
-  user: User;
-  token: string;
-  expiresAt: Date;
-}
-</edit>
-
-**Replace Example:**
-<edit file="src/auth.ts" start="15" end="20" action="replace">
-if (user.password == inputPassword) {
-  return true;
-}
----
-if (await bcrypt.compare(inputPassword, user.password)) {
-  return true;
-}
-</edit>
-
-**Insert Example:**
-<edit file="src/auth.ts" after="5" action="insert">
-import bcrypt from 'bcrypt';
-</edit>
-
-**Delete Example:**
-<edit file="src/utils.ts" start="45" end="50" action="delete">
-function deprecatedHelper() {
-  // old code
-}
-</edit>
-
-CAPABILITIES:
-- Fix bugs and security issues
-- Refactor code for better quality
-- Add error handling and validation
-- Optimize performance
-- Add types, tests, and documentation
-- Convert between paradigms (callbacks → async/await, etc.)
-- Implement new features
-- Apply best practices
-
-`;
-
-    console.log('[AI Chat] Phase 1: Tool selection...');
-    const phase1Result = await model.generateContent(initialPrompt);
-    const phase1Response = phase1Result.response;
-
-    // Check if LLM wants to use tools
-    const functionCalls = phase1Response.functionCalls();
-
+    // Check if model supports tools
+    const supportsTools = modelSupportsTools(modelId);
     let toolResults: ToolResult[] = [];
     let totalToolTokens = 0;
 
-    if (functionCalls && functionCalls.length > 0) {
-      // ============================================================
-      // PHASE 2: Execute tools that LLM requested
-      // ============================================================
-      console.log(`[AI Chat] Phase 2: Executing ${functionCalls.length} tool(s)...`);
+    if (supportsTools) {
+      // Use tool calling flow
+      console.log('[AI Chat] Using tool calling flow...');
 
-      const toolContext: ToolContext = {
-        projectId,
-        sessionId,
-        chroma: this.chroma,
-        embeddings: this.embeddings,
-        fileEditService: this.fileEditService,
-        db: this.db,
-        exaApiKey: this.exaApiKey,
-      };
-
-      // Execute all tools in parallel
-      const toolPromises = functionCalls.map(async (call) => {
-        console.log(`[AI Chat] Executing tool: ${call.name}`);
-        return await AITools.executeTool(
-          call.name,
-          call.args,
-          toolContext
-        );
-      });
-
-      toolResults = await Promise.all(toolPromises);
-      totalToolTokens = toolResults.reduce((sum, result) => sum + (result.tokensUsed || 0), 0);
-
-      // ============================================================
-      // PHASE 3: Call LLM again with tool results
-      // ============================================================
-      console.log('[AI Chat] Phase 3: Generating final response with tool results...');
-
-      const toolResultsText = this.formatToolResults(toolResults);
-      const systemPrompt = this.getCodeEditSystemPrompt();
-
-      const finalPrompt = `${systemPrompt}
-
-${initialContext}
-
-Tool Results:
-${toolResultsText}
-
-Now provide your answer or code edits based on the information above.Always Use <edit> XML tags for  any code changes/suggestions.Always provide a code edit if the user asks to change code.`;
-
-      const finalModel = this.genAI.getGenerativeModel({
-        model: this.model,
-        generationConfig: {
-          maxOutputTokens: this.maxTokens,
+      const { response, toolResults: results, iterations } = await this.llmClient.createCompletionWithTools(
+        {
+          model: modelId,
+          messages,
+          tools,
+          tool_choice: 'auto',
           temperature: this.temperature,
+          max_tokens: this.maxTokens,
         },
-      });
+        async (toolCall: ToolCall) => {
+          console.log(`[AI Chat] Executing tool: ${toolCall.function.name}`);
+          const result = await AITools.executeToolCall(toolCall, toolContext);
+          toolResults.push(result);
+          totalToolTokens += result.tokensUsed || 0;
+          return this.formatToolResultForLLM(result);
+        }
+      );
 
-      const finalResult = await finalModel.generateContent(finalPrompt);
-      const response = finalResult.response.text();
-      console.log('response', response);
+      console.log(`[AI Chat] Completed in ${iterations} iteration(s), ${toolResults.length} tool call(s)`);
 
-      // Parse edits and build response
+      const aiResponse = response.choices[0]?.message?.content || '';
+
+      // Build and return response
       return await this.buildResponse(
         sessionId,
         message,
-        response,
+        aiResponse,
         toolResults,
         totalToolTokens,
         projectId,
-        finalPrompt
+        userContext,
+        response.usage
       );
 
     } else {
-      // ============================================================
-      // NO TOOLS NEEDED: Direct response
-      // ============================================================
-      console.log('[AI Chat] No tools needed, direct response');
+      // Model doesn't support tools - direct completion
+      console.log('[AI Chat] Model does not support tools, using direct completion...');
 
-      const directResponse = phase1Response.text();
+      const response = await this.llmClient.createCompletion({
+        model: modelId,
+        messages,
+        temperature: this.temperature,
+        max_tokens: this.maxTokens,
+      });
 
-      // Parse edits (might be text-only)
+      const aiResponse = response.choices[0]?.message?.content || '';
+
       return await this.buildResponse(
         sessionId,
         message,
-        directResponse,
+        aiResponse,
         [],
         0,
         projectId,
-        initialPrompt
+        userContext,
+        response.usage
       );
     }
-  }
-
-  /**
-   * Format tool results for LLM consumption
-   */
-  private formatToolResults(results: ToolResult[]): string {
-    if (results.length === 0) {
-      return 'No tools were used.';
-    }
-
-    return results.map((result, index) => {
-      if (!result.success) {
-        return `[Tool ${index + 1}] ${result.toolName} - FAILED\nError: ${result.error}`;
-      }
-
-      let formatted = `[Tool ${index + 1}] ${result.toolName} - SUCCESS\n`;
-
-      switch (result.toolName) {
-        case 'search_codebase':
-          formatted += `Query: "${result.data.query}"\n`;
-          formatted += `Found ${result.data.resultsCount} results:\n\n`;
-          result.data.results.forEach((r: any) => {
-            formatted += `[${r.index}] ${r.filePath}:${r.startLine}-${r.endLine}`;
-            if (r.chunkName) {
-              formatted += ` (${r.chunkType}: ${r.chunkName})`;
-            }
-            formatted += ` [similarity: ${r.similarity.toFixed(2)}]\n\`\`\`\n${r.code}\n\`\`\`\n\n`;
-          });
-          break;
-
-        case 'read_file':
-          formatted += `File: ${result.data.filePath}\n`;
-          formatted += `Lines: ${result.data.lines} | Size: ${result.data.size} bytes\n`;
-          formatted += `\`\`\`\n${result.data.content}\n\`\`\`\n`;
-          break;
-
-        case 'read_project':
-          formatted += `Project: ${result.data.projectPath}\n`;
-          formatted += `Total Files: ${result.data.summary.totalFiles}\n`;
-          formatted += `Total Directories: ${result.data.summary.totalDirectories}\n`;
-          formatted += `\n${JSON.stringify(result.data, null, 2)}\n`;
-          break;
-
-        case 'search_web':
-          formatted += `Query: "${result.data.query}"\n`;
-          formatted += `Found ${result.data.resultsCount} results:\n\n`;
-          result.data.results.forEach((r: any, i: number) => {
-            formatted += `[${i + 1}] ${r.title}\n`;
-            formatted += `URL: ${r.url}\n`;
-            formatted += `${r.text}\n\n`;
-          });
-          break;
-
-        case 'get_chat_history':
-          formatted += `Retrieved ${result.data.messageCount} messages:\n\n`;
-          result.data.messages.forEach((msg: any) => {
-            formatted += `[${msg.timestamp}] ${msg.role.toUpperCase()}: ${msg.content}\n\n`;
-          });
-          break;
-
-        default:
-          formatted += JSON.stringify(result.data, null, 2);
-      }
-
-      return formatted;
-    }).join('\n---\n\n');
-  }
-
-  /**
-   * Build final response with edits, summary, and tool usage
-   */
-  private async buildResponse(
-    sessionId: string,
-    userMessage: string,
-    aiResponse: string,
-    toolResults: ToolResult[],
-    toolTokens: number,
-    projectId: string,
-    fullPrompt: string
-  ): Promise<AIEditResponse> {
-    // Parse edits from response
-    const { explanation, edits } = this.aiEditService.parseEdits(aiResponse);
-
-    // Check if text-only
-    const isTextOnly = edits.length === 0;
-
-    // Enrich edits with content for preview
-    const enrichedEdits = isTextOnly ? [] : await this.enrichEditsWithContent(edits, projectId);
-
-    // Token estimation
-    const promptTokens = this.estimateTokens(fullPrompt);
-    const completionTokens = this.estimateTokens(aiResponse);
-
-    // Extract search results from tools for context chunks
-    const searchResults = toolResults
-      .filter(r => r.toolName === 'search_codebase' && r.success)
-      .flatMap(r => r.data.results);
-
-    // Save to history
-    const messageId = this.saveMessages(
-      sessionId,
-      userMessage,
-      explanation || aiResponse,
-    [],
-      enrichedEdits
-    );
-
-    // Generate summary
-    const summary = isTextOnly ? {
-      totalEdits: 0,
-      creates: 0,
-      replaces: 0,
-      inserts: 0,
-      deletes: 0,
-      affectedFiles: []
-    } : this.generateEditSummary(enrichedEdits);
-
-    return {
-      sessionId,
-      messageId,
-      explanation: explanation || aiResponse,
-      edits: enrichedEdits,
-      summary,
-      appliedEdits: undefined,
-      contextChunks: searchResults.map((r: any) => ({
-        filePath: r.filePath,
-        startLine: r.startLine,
-        endLine: r.endLine,
-        chunkType: r.chunkType,
-        chunkName: r.chunkName,
-        similarity: r.similarity
-      })),
-      toolCalls: toolResults.length > 0 ? {
-        totalCalls: toolResults.length,
-        tools: toolResults.map(r => ({
-          name: r.toolName,
-          tokensUsed: r.tokensUsed || 0,
-          success: r.success
-        }))
-      } : undefined,
-      tokenUsage: {
-        promptTokens,
-        completionTokens,
-        totalTokens: promptTokens + completionTokens + toolTokens,
-        toolTokens
-      }
-    };
-  }
-
-  /**
-   * Generate summary of edits for quick overview
-   */
-  private generateEditSummary(edits: CodeEdit[]) {
-    const creates = edits.filter(e => e.action === 'create').length;
-    const replaces = edits.filter(e => e.action === 'replace').length;
-    const inserts = edits.filter(e => e.action === 'insert').length;
-    const deletes = edits.filter(e => e.action === 'delete').length;
-    const affectedFiles = [...new Set(edits.map(e => e.file))];
-
-    return {
-      totalEdits: edits.length,
-      creates,
-      replaces,
-      inserts,
-      deletes,
-      affectedFiles
-    };
-  }
-
-  /**
-   * Enrich edits with current file content for frontend preview
-   * NOTE: We don't access git/filesystem here - just return edits as-is
-   * Frontend has the file contents and will handle preview/diff generation
-   */
-  private async enrichEditsWithContent(
-    edits: CodeEdit[],
-    projectId: string
-  ): Promise<CodeEdit[]> {
-    // Simply return edits as-is
-    // Frontend will handle oldCode extraction and preview generation
-    return edits.map(edit => ({
-      ...edit,
-      explanation: edit.explanation || `${edit.action} in ${edit.file}`
-    }));
   }
 
   /**
    * Get system prompt for code editing
    */
-  private getCodeEditSystemPrompt(): string {
+  private getSystemPrompt(): string {
     return `You are an expert AI code editor that helps developers write, refactor, and improve code.
 
 RESPONSE TYPES:
@@ -589,6 +286,14 @@ function deprecatedHelper() {
 </old>
 </edit>
 
+TOOL USAGE GUIDELINES:
+- You have access to tools for searching code, reading files, and web search
+- Use search_codebase to find relevant code context
+- Use read_file to get specific file contents
+- Use search_web for documentation or external references
+- Use get_chat_history to reference previous conversation
+- Call multiple tools if needed for comprehensive answers
+
 CAPABILITIES:
 - Fix bugs and security issues
 - Refactor code for better quality
@@ -602,59 +307,175 @@ CAPABILITIES:
 GUIDELINES:
 1. Always explain WHY before showing edits
 2. Reference specific files and line numbers
-3. **CRITICAL**: In <old> tag, include EXACTLY the code from the specified line range (start to end). Match character-for-character including whitespace.
-4. The frontend uses fuzzy matching to locate edits, so exact line range content is sufficient - no need for extra surrounding context.
-5. Provide complete, working code in <new> tag
-6. Always provide a code edit if the user asks to change code.
-7. Consider dependencies (imports, etc.)
-8. Maintain code style and conventions
-9. Test suggestions mentally before responding
-10. Always edit the code in the bounds of given code context.dont change the code outside the given code context.
-
-RESPONSE FORMAT:
-1. Brief explanation of what you'll do
-2. One or more <edit> tags
-3. Additional context or warnings if needed
+3. **CRITICAL**: In <old> tag, include EXACTLY the code from the specified line range
+4. Provide complete, working code in <new> tag
+5. Always provide a code edit if the user asks to change code
+6. Consider dependencies (imports, etc.)
+7. Maintain code style and conventions
+8. Test suggestions mentally before responding
+9. Always edit code within bounds of given context
 
 Remember: Users can review and apply your edits individually, so each edit should be self-contained and safe to apply independently.`;
   }
 
   /**
-   * Build context string from search results
+   * Format tool result for LLM consumption
    */
-  private buildContext(results: SearchResult[]): string {
-    if (results.length === 0) {
-      return 'No relevant code found in vector search.';
+  private formatToolResultForLLM(result: ToolResult): string {
+    if (!result.success) {
+      return `Error: ${result.error}`;
     }
 
-    const contextParts = results.map((result, index) => {
-      const { filePath, startLine, endLine, chunkText, chunkType, chunkName } =
-        result.payload;
+    switch (result.toolName) {
+      case 'search_codebase':
+        let searchOutput = `Found ${result.data.resultsCount} results for "${result.data.query}":\n\n`;
+        result.data.results.forEach((r: any) => {
+          searchOutput += `[${r.index}] ${r.filePath}:${r.startLine}-${r.endLine}`;
+          if (r.chunkName) {
+            searchOutput += ` (${r.chunkType}: ${r.chunkName})`;
+          }
+          searchOutput += ` [similarity: ${r.similarity.toFixed(2)}]\n\`\`\`\n${r.code}\n\`\`\`\n\n`;
+        });
+        return searchOutput;
 
-      let header = `[${index + 1}] ${filePath}:${startLine}-${endLine}`;
-      if (chunkName) {
-        header += ` (${chunkType}: ${chunkName})`;
-      } else {
-        header += ` (${chunkType})`;
-      }
+      case 'read_file':
+        return `File: ${result.data.filePath}\nLines: ${result.data.lines} | Size: ${result.data.size} bytes\n\`\`\`\n${result.data.content}\n\`\`\``;
 
-      return `${header}\n\`\`\`\n${chunkText}\n\`\`\``;
-    });
+      case 'read_project':
+        return `Project: ${result.data.projectPath}\nTotal Files: ${result.data.summary.totalFiles}\nTotal Directories: ${result.data.summary.totalDirectories}\n\n${JSON.stringify(result.data, null, 2)}`;
 
-    return contextParts.join('\n\n');
+      case 'search_web':
+        let webOutput = `Web search results for "${result.data.query}":\n\n`;
+        result.data.results.forEach((r: any, i: number) => {
+          webOutput += `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.text}\n\n`;
+        });
+        return webOutput;
+
+      case 'get_chat_history':
+        let historyOutput = `Retrieved ${result.data.messageCount} messages:\n\n`;
+        result.data.messages.forEach((msg: any) => {
+          historyOutput += `[${msg.timestamp}] ${msg.role.toUpperCase()}: ${msg.content}\n\n`;
+        });
+        return historyOutput;
+
+      default:
+        return JSON.stringify(result.data, null, 2);
+    }
   }
 
   /**
-   * Format conversation history
+   * Build final response with edits, summary, and tool usage
    */
-  private formatHistory(
-    history: Array<{ role: string; content: string }>
-  ): string {
-    if (history.length === 0) {
-      return 'No previous conversation.';
-    }
+  private async buildResponse(
+    sessionId: string,
+    userMessage: string,
+    aiResponse: string,
+    toolResults: ToolResult[],
+    toolTokens: number,
+    projectId: string,
+    fullPrompt: string,
+    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
+  ): Promise<AIEditResponse> {
+    // Parse edits from response
+    const { explanation, edits } = this.aiEditService.parseEdits(aiResponse);
 
-    return history.map((msg) => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n');
+    // Check if text-only
+    const isTextOnly = edits.length === 0;
+
+    // Enrich edits with content for preview
+    const enrichedEdits = isTextOnly ? [] : await this.enrichEditsWithContent(edits, projectId);
+
+    // Token estimation (use actual if available)
+    const promptTokens = usage?.prompt_tokens || this.estimateTokens(fullPrompt);
+    const completionTokens = usage?.completion_tokens || this.estimateTokens(aiResponse);
+
+    // Extract search results from tools for context chunks
+    const searchResults = toolResults
+      .filter(r => r.toolName === 'search_codebase' && r.success)
+      .flatMap(r => r.data.results);
+
+    // Save to history
+    const messageId = this.saveMessages(
+      sessionId,
+      userMessage,
+      explanation || aiResponse,
+      [],
+      enrichedEdits
+    );
+
+    // Generate summary
+    const summary = isTextOnly ? {
+      totalEdits: 0,
+      creates: 0,
+      replaces: 0,
+      inserts: 0,
+      deletes: 0,
+      affectedFiles: []
+    } : this.generateEditSummary(enrichedEdits);
+
+    return {
+      sessionId,
+      messageId,
+      explanation: explanation || aiResponse,
+      edits: enrichedEdits,
+      summary,
+      appliedEdits: undefined,
+      contextChunks: searchResults.map((r: any) => ({
+        filePath: r.filePath,
+        startLine: r.startLine,
+        endLine: r.endLine,
+        chunkType: r.chunkType,
+        chunkName: r.chunkName,
+        similarity: r.similarity
+      })),
+      toolCalls: toolResults.length > 0 ? {
+        totalCalls: toolResults.length,
+        tools: toolResults.map(r => ({
+          name: r.toolName,
+          tokensUsed: r.tokensUsed || 0,
+          success: r.success
+        }))
+      } : undefined,
+      tokenUsage: {
+        promptTokens,
+        completionTokens,
+        totalTokens: (usage?.total_tokens || promptTokens + completionTokens) + toolTokens,
+        toolTokens
+      }
+    };
+  }
+
+  /**
+   * Generate summary of edits for quick overview
+   */
+  private generateEditSummary(edits: CodeEdit[]) {
+    const creates = edits.filter(e => e.action === 'create').length;
+    const replaces = edits.filter(e => e.action === 'replace').length;
+    const inserts = edits.filter(e => e.action === 'insert').length;
+    const deletes = edits.filter(e => e.action === 'delete').length;
+    const affectedFiles = [...new Set(edits.map(e => e.file))];
+
+    return {
+      totalEdits: edits.length,
+      creates,
+      replaces,
+      inserts,
+      deletes,
+      affectedFiles
+    };
+  }
+
+  /**
+   * Enrich edits with current file content for frontend preview
+   */
+  private async enrichEditsWithContent(
+    edits: CodeEdit[],
+    projectId: string
+  ): Promise<CodeEdit[]> {
+    return edits.map(edit => ({
+      ...edit,
+      explanation: edit.explanation || `${edit.action} in ${edit.file}`
+    }));
   }
 
   /**
@@ -676,17 +497,11 @@ Remember: Users can review and apply your edits individually, so each edit shoul
    * Generate a concise title from user message (max 50 chars)
    */
   private generateTitle(message: string): string {
-    // Clean the message
     let title = message.trim();
-
-    // Remove file tags (@filepath)
     title = title.replace(/@[\w/.]+/g, '').trim();
-
-    // Take first sentence or first 50 chars
     const firstSentence = title.split(/[.!?]/)[0];
     title = firstSentence.length > 50 ? firstSentence.substring(0, 47) + '...' : firstSentence;
 
-    // Capitalize first letter
     if (title.length > 0) {
       title = title.charAt(0).toUpperCase() + title.slice(1);
     }
@@ -695,27 +510,7 @@ Remember: Users can review and apply your edits individually, so each edit shoul
   }
 
   /**
-   * Get conversation history
-   * Returns only user messages (which contain AI responses in metadata)
-   */
-  private getHistory(
-    sessionId: string,
-    limit: number = 10
-  ): Array<{ role: string; content: string }> {
-    const messages = this.db.getDb().prepare(`
-      SELECT role, content
-      FROM chat_messages
-      WHERE session_id = ? AND role = 'user'
-      ORDER BY created_at DESC
-      LIMIT ?
-    `).all(sessionId, limit) as Array<{ role: string; content: string }>;
-
-    return messages.reverse();
-  }
-
-  /**
    * Save messages to history
-   * Saves user message with AI response in metadata
    */
   private saveMessages(
     sessionId: string,
@@ -727,7 +522,6 @@ Remember: Users can review and apply your edits individually, so each edit shoul
     const now = Date.now();
 
     return this.db.transaction(() => {
-      // Save user message with AI response in metadata
       const messageId = uuidv4();
 
       const responseData = {
@@ -760,10 +554,9 @@ Remember: Users can review and apply your edits individually, so each edit shoul
         'user',
         userMessage,
         now,
-        JSON.stringify(responseData) // AI response in user message metadata
+        JSON.stringify(responseData)
       );
 
-      // Update session (only increment by 1 since we're saving one combined message)
       this.db.getDb().prepare(`
         UPDATE chat_sessions
         SET updated_at = ?, message_count = message_count + 1

@@ -16,7 +16,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     // Use basicSsl only if custom certificates don't exist
-    ...(!hasCustomCert ? [basicSsl()] : [])
+    // ...(!hasCustomCert ? [basicSsl()] : [])
   ],
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -25,18 +25,18 @@ export default defineConfig({
     },
   },
 
-  server: {
-    https: hasCustomCert ? {
-      key: fs.readFileSync(keyPath),
-      cert: fs.readFileSync(certPath),
-    } : true,
-    port: 5173,
-    host: true, // Allow external access
-    headers: {
-      // Required for WebContainer SharedArrayBuffer support
-      // Using 'credentialless' instead of 'require-corp' to allow Tailwind and other resources to load
-      'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin',
-    },
-  },
+  // server: {
+  //   https: hasCustomCert ? {
+  //     key: fs.readFileSync(keyPath),
+  //     cert: fs.readFileSync(certPath),
+  //   } : true,
+  //   port: 5173,
+  //   host: true, // Allow external access
+  //   headers: {
+  //     // Required for WebContainer SharedArrayBuffer support
+  //     // Using 'credentialless' instead of 'require-corp' to allow Tailwind and other resources to load
+  //     'Cross-Origin-Embedder-Policy': 'credentialless',
+  //     'Cross-Origin-Opener-Policy': 'same-origin',
+  //   },
+  // },
 })
